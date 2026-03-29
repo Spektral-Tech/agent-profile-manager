@@ -73,9 +73,21 @@ agp shell personal
 
 # Print environment variables (for eval or .envrc)
 agp env work
+
+# View usage summary
+agp usage
+agp usage personal
 ```
 
 ## Commands
+
+### `agp list`
+
+List all profiles with descriptions and creation dates.
+
+```bash
+agp list
+```
 
 ### `agp create <name> [--desc "description"]`
 
@@ -84,14 +96,6 @@ Create a new isolated profile with subdirectories for each tool.
 ```bash
 agp create my-profile
 agp create work-account --desc "Acme Corp"
-```
-
-### `agp list`
-
-List all profiles with descriptions and creation dates.
-
-```bash
-agp list
 ```
 
 ### `agp open <name> <tool> [tool-args...]`
@@ -139,6 +143,22 @@ Delete a profile and all its data. Prompts for confirmation unless `-f` is used.
 agp delete old-profile
 agp delete old-profile -f  # Skip confirmation
 ```
+
+### `agp usage [name] [--detail]`
+
+Show usage summary and interaction statistics for profiles. Displays Claude Code sessions, completed interactions, and recent activity.
+
+```bash
+agp usage                  # Show summary for all profiles
+agp usage personal         # Show details for 'personal' profile
+agp usage --detail         # Show detailed breakdown of all profiles
+```
+
+**Metrics tracked:**
+- **Profiles**: All agent profiles created
+- **Sessions**: Number of Claude Code sessions per profile
+- **Usage**: Total completed turns/interactions per profile
+- **Last Activity**: Most recent session activity timestamp
 
 ## Profile Structure
 

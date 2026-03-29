@@ -60,7 +60,7 @@ validate_name() {
   if [[ ! "$name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
     error "Invalid profile name '${name}'. Use only letters, numbers, hyphens and underscores."
   fi
-  local reserved=("list" "create" "delete" "open" "shell" "env" "install" "help")
+  local reserved=("list" "create" "delete" "open" "shell" "env" "usage" "install" "help")
   for r in "${reserved[@]}"; do
     if [ "$name" = "$r" ]; then
       error "Profile name '${name}' is reserved. Choose a different name."
@@ -386,6 +386,146 @@ cmd_install() {
   dim "  Make sure ${HOME}/.local/bin is in your PATH."
 }
 
+count_claude_sessions() {
+  local profile_dir="$1"
+  local session_dir="${profile_dir}/claude/claude-code-sessions"
+  if [ ! -d "$session_dir" ]; then
+    echo 0
+    return
+  fi
+  find "$session_dir" -name "*.json" -type f 2>/dev/null | wc -l
+}
+
+get_last_activity() {
+  local profile_dir="$1"
+  local session_dir="${profile_dir}/claude/claude-code-sessions"
+  if [ ! -d "$session_dir" ]; then
+    echo "never"
+    return
+  fi
+  local latest
+  latest=$(find "$session_dir" -name "*.json" -type f 2>/dev/null -exec stat -f '%Sm' {} \; 2>/dev/null | sort -r | head -1)
+  if [ -z "$latest" ]; then
+    echo "never"
+  else
+    echo "$latest"
+  fi
+}
+
+count_completed_turns() {
+  local profile_dir="$1"
+  local session_dir="${profile_dir}/claude/claude-code-sessions"
+  if [ ! -d "$session_dir" ]; then
+    echo 0
+    return
+  fi
+  local total=0
+  while IFS= read -r file; do
+    if [ -f "$file" ]; then
+      local turns
+      turns=$(jq '.completedTurns // 0' "$file" 2>/dev/null)
+      if [ -n "$turns" ] && [ "$turns" != "null" ]; then
+        total=$((total + turns))
+      fi
+    fi
+  done < <(find "$session_dir" -name "*.json" -type f 2>/dev/null)
+  echo "$total"
+}
+
+
+get_session_title() {
+  local session_file="$1"
+  jq -r '.title // "Untitled"' "$session_file" 2>/dev/null
+}
+
+cmd_usage() {
+  local profile_name=""
+  local show_detail=0
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --detail|-d) show_detail=1; shift ;;
+      --help|-h) usage_tokens; return 0 ;;
+      -*) error "Unknown option: $1" ;;
+      *) profile_name="$1"; shift ;;
+    esac
+  done
+
+  if [ ! -d "$AGP_PROFILES_DIR" ] || [ -z "$(ls -A "$AGP_PROFILES_DIR" 2>/dev/null)" ]; then
+    info "No profiles found."
+    return 0
+  fi
+
+  if [ -n "$profile_name" ]; then
+    if ! profile_exists "$profile_name"; then
+      error "Profile '${profile_name}' not found."
+    fi
+    # Show detail for specific profile
+    local p
+    p="$(profile_path "$profile_name")"
+    local sessions
+    sessions=$(count_claude_sessions "$p")
+    local last_activity
+    last_activity=$(get_last_activity "$p")
+    local turns
+    turns=$(count_completed_turns "$p")
+
+    printf "\n${BOLD}${CYAN}Profile: ${profile_name}${RESET}\n" >&2
+    printf "${DIM}────────────────────────────────────${RESET}\n" >&2
+    printf "  Claude Code Sessions:   ${GREEN}%d${RESET}\n" "$sessions" >&2
+    printf "  Completed Interactions: ${MAGENTA}%d${RESET}\n" "$turns" >&2
+    printf "  Last Activity:          ${DIM}%s${RESET}\n" "$last_activity" >&2
+
+    # Show recent sessions if detail mode
+    if [ "$sessions" -gt 0 ]; then
+      local session_dir="${p}/claude/claude-code-sessions"
+      printf "\n  ${BOLD}Recent Sessions:${RESET}\n" >&2
+      find "$session_dir" -name "*.json" -type f 2>/dev/null | sort -r | head -5 | while read -r session_file; do
+        local title
+        title=$(get_session_title "$session_file")
+        local turns_in_session
+        turns_in_session=$(jq '.completedTurns // 0' "$session_file" 2>/dev/null)
+        printf "    • %-40s (${CYAN}%d interactions${RESET})\n" "${title:0:35}..." "$turns_in_session" >&2
+      done
+    fi
+    printf "\n" >&2
+    return 0
+  fi
+
+  # Show summary for all profiles
+  local name_w=18
+  printf "\n${BOLD}${WHITE}%-${name_w}s  %-10s  %-16s  %-12s${RESET}\n" \
+    "PROFILE" "USAGE" "LAST ACTIVITY" "SESSIONS" >&2
+  printf "${DIM}%s${RESET}\n" "$(printf '─%.0s' {1..70})" >&2
+
+  local total_sessions=0
+  local total_turns=0
+
+  for dir in $(ls -d "${AGP_PROFILES_DIR}/"*/ 2>/dev/null | sort); do
+    local pname
+    pname="$(basename "$dir")"
+
+    local sessions
+    sessions=$(count_claude_sessions "$dir")
+    local last_activity
+    last_activity=$(get_last_activity "$dir")
+    local turns
+    turns=$(count_completed_turns "$dir")
+
+    total_sessions=$((total_sessions + sessions))
+    total_turns=$((total_turns + turns))
+
+    printf "  %-$((name_w - 2))s  ${MAGENTA}%-9d${RESET}  ${DIM}%-15s${RESET}  ${CYAN}%d${RESET}\n" \
+      "$pname" "$turns" "$last_activity" "$sessions" >&2
+  done
+
+  printf "\n${BOLD}SUMMARY${RESET}\n" >&2
+  printf "${DIM}────────────────────────────────────${RESET}\n" >&2
+  printf "  Total Claude Code Sessions: ${CYAN}%d${RESET}\n" "$total_sessions" >&2
+  printf "  Total Interactions (Usage): ${MAGENTA}%d${RESET}\n" "$total_turns" >&2
+  printf "\n" >&2
+}
+
 # ─── Help ────────────────────────────────────────────────────────────────────
 
 usage() {
@@ -403,6 +543,7 @@ ${BOLD}COMMANDS${RESET}
   ${CYAN}open${RESET}   <name> <tool> [args]    Open a tool under a profile
   ${CYAN}shell${RESET}  <name>                  Start a shell with profile env
   ${CYAN}env${RESET}    <name>                  Print export statements (for eval)
+  ${CYAN}usage${RESET}  [name] [--detail]       Show usage by profile
   ${CYAN}install${RESET}                        Symlink agp to ~/.local/bin/agp
 
 ${BOLD}TOOLS${RESET} (for agp open)
@@ -519,6 +660,24 @@ ${BOLD}EXAMPLES${RESET}
 EOF
 }
 
+usage_usage() {
+  cat >&2 <<EOF
+${BOLD}agp tokens${RESET} [name] [options]
+
+Show usage summary by profile. Displays Claude Code sessions and
+completed interactions across all profiles.
+
+${BOLD}OPTIONS${RESET}
+  --detail, -d   Show detailed breakdown for each profile
+  --help, -h     Show this help message
+
+${BOLD}EXAMPLES${RESET}
+  agp tokens              # Show summary for all profiles
+  agp tokens personal     # Show details for 'personal' profile
+  agp tokens --detail     # Show detailed summary for all profiles
+EOF
+}
+
 # ─── Main ────────────────────────────────────────────────────────────────────
 
 main() {
@@ -537,6 +696,7 @@ main() {
     open)           cmd_open "$@" ;;
     shell)          cmd_shell "$@" ;;
     env)            cmd_env "$@" ;;
+    usage)          cmd_usage "$@" ;;
     install)        cmd_install "$@" ;;
     -h|--help|help) usage; exit 0 ;;
     -v|--version)   echo "agp ${AGP_VERSION}"; exit 0 ;;
