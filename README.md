@@ -15,15 +15,41 @@ Perfect for developers who work with multiple AI accounts (personal, work, testi
 
 ## Installation
 
+### One-liner (Recommended)
+
+Download and run the interactive installer directly from GitHub:
+
 ```bash
-./agp install
+bash <(curl -fsSL https://raw.githubusercontent.com/Spektral-Tech/agent-profile-manager/main/install.sh)
 ```
 
-This symlinks the script to `~/.local/bin/agp`. Make sure `~/.local/bin` is in your `$PATH`:
+The installer will ask you to choose between:
+1. **Clone repository** — Get the full source code
+2. **Download binary** — Quick pre-built installation
+
+### Manual Installation
+
+Clone the repository and run the installer:
+
+```bash
+git clone https://github.com/Spektral-Tech/agent-profile-manager.git
+cd agent-profile-manager
+./install.sh
+```
+
+### PATH Configuration
+
+Make sure `~/.local/bin` is in your `$PATH`:
 
 ```bash
 # Add to ~/.zshrc or ~/.bashrc if needed
 export PATH="$HOME/.local/bin:$PATH"
+```
+
+Then reload your shell:
+
+```bash
+source ~/.zshrc  # or source ~/.bashrc
 ```
 
 ## Quick Start
@@ -240,7 +266,9 @@ agp list
 
 ## License
 
-[Add your license here]
+MIT License © 2026 Spektral Tech - Antonio Eduardo (SkyaTura)
+
+See [LICENSE](LICENSE) for details.
 
 ## Support
 
