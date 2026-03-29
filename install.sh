@@ -19,14 +19,37 @@ mkdir -p ~/.local/bin
 
 # Function to install from source
 install_from_source() {
-    echo -e "${YELLOW}Cloning agp repository...${NC}"
+    echo -e "${YELLOW}Clone destination:${NC}"
+    echo ""
+    echo "  1) Current directory (.)"
+    echo "  2) Choose a custom path"
+    echo ""
+    read -p "Select option (1 or 2): " CLONE_CHOICE
 
-    # Create temp directory
-    TEMP_DIR=$(mktemp -d)
-    trap "rm -rf $TEMP_DIR" EXIT
+    CLONE_DIR=""
+    SHOULD_CLEANUP=true
+
+    case $CLONE_CHOICE in
+        1)
+            CLONE_DIR="./agent-profile-manager"
+            SHOULD_CLEANUP=false
+            ;;
+        2)
+            read -p "Enter path for clone (default: ./agent-profile-manager): " CUSTOM_PATH
+            CLONE_DIR="${CUSTOM_PATH:-.\/agent-profile-manager}"
+            SHOULD_CLEANUP=false
+            ;;
+        *)
+            echo -e "${RED}Invalid choice${NC}"
+            exit 1
+            ;;
+    esac
+
+    echo ""
+    echo -e "${YELLOW}Cloning agp repository to $CLONE_DIR...${NC}"
 
     # Clone the repository
-    if git clone --depth 1 https://github.com/Spektral-Tech/agent-profile-manager.git "$TEMP_DIR" 2>/dev/null; then
+    if git clone --depth 1 https://github.com/Spektral-Tech/agent-profile-manager.git "$CLONE_DIR" 2>/dev/null; then
         echo -e "${GREEN}✓ Repository cloned${NC}"
     else
         echo -e "${RED}✗ Failed to clone repository${NC}"
@@ -34,13 +57,17 @@ install_from_source() {
     fi
 
     # Copy agp script
-    if [ -f "$TEMP_DIR/agp" ]; then
-        cp "$TEMP_DIR/agp" ~/.local/bin/agp
+    if [ -f "$CLONE_DIR/agp" ]; then
+        cp "$CLONE_DIR/agp" ~/.local/bin/agp
         chmod +x ~/.local/bin/agp
         echo -e "${GREEN}✓ Script installed to ~/.local/bin/agp${NC}"
     else
         echo -e "${RED}✗ agp script not found in repository${NC}"
         exit 1
+    fi
+
+    if [ "$SHOULD_CLEANUP" = false ]; then
+        echo -e "${GREEN}✓ Repository kept at $CLONE_DIR${NC}"
     fi
 }
 
