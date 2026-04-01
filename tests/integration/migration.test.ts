@@ -99,6 +99,36 @@ describe("legacy migration", () => {
     });
   });
 
+  test("TOML name differing from dir name does not create duplicate entries", async () => {
+    await withTempProfiles(async (dir) => {
+      const { serializeYaml } = await import("../../src/lib/yaml");
+      // agp.yaml already has "work" (migrated by its canonical name)
+      await Bun.write(
+        join(dir, "agp.yaml"),
+        serializeYaml({
+          version: "1",
+          profiles: [{ name: "work", description: "Work", created: "2025-01-01T00:00:00Z" }],
+        }),
+      );
+      // A directory named "work-legacy" contains a TOML whose name field is "work"
+      await writeLegacyToml(dir, "work-legacy", "Work", "2025-01-01T00:00:00Z");
+      // Override the name field inside the TOML to "work" (simulating a renamed dir)
+      await Bun.write(
+        join(dir, "work-legacy", "profile.toml"),
+        `name = "work"\ndescription = "Work"\ncreated = "2025-01-01T00:00:00Z"\n`,
+      );
+
+      const { listProfiles, resetConfig } = await import("../../src/lib/agpConfig");
+      await listProfiles();
+      resetConfig();
+      const profiles = await listProfiles();
+
+      // "work" must appear exactly once
+      expect(profiles.filter((p) => p.name === "work")).toHaveLength(1);
+      expect(profiles).toHaveLength(1);
+    });
+  });
+
   test("migration is idempotent: running list twice does not duplicate entries", async () => {
     await withTempProfiles(async (dir) => {
       await writeLegacyToml(dir, "solo", "Solo profile", "2025-01-01T00:00:00Z");

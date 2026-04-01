@@ -65,8 +65,13 @@ async function mergeUnregistered(config: AgpConfig): Promise<boolean> {
     if (known.has(name)) continue;
     const data = await readLegacyToml(name);
     if (Object.keys(data).length === 0) continue;
+    const profileName = data.name ?? name;
+    // Guard against TOML name differing from directory name: if the resolved
+    // name is already registered, skip to avoid duplicate entries.
+    if (known.has(profileName)) continue;
+    known.add(profileName);
     config.profiles.push({
-      name: data.name ?? name,
+      name: profileName,
       description: data.description ?? "",
       created: data.created ?? "",
     });
