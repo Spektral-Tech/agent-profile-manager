@@ -1,4 +1,5 @@
 import { removeDir } from "../lib/fs";
+import { removeProfile } from "../lib/agpConfig";
 import { dirExists, profilePath } from "../models/profile";
 import { BOLD, DIM, RESET, YELLOW } from "../ui/colors";
 import { error, info, success } from "../ui/output";
@@ -50,5 +51,6 @@ export async function cmdDelete(args: string[]): Promise<void> {
   }
 
   await removeDir(p);
+  await removeProfile(name);
   success(`Deleted profile '${name}'.`);
 }
