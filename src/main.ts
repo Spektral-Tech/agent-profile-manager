@@ -12,6 +12,8 @@ import { cmdEnv } from "./commands/env";
 import { cmdUsage } from "./commands/usage";
 import { cmdWhoami } from "./commands/whoami";
 import { cmdCleanOldConfig } from "./commands/clean-old-config";
+import { cmdBrand } from "./commands/brand";
+import { cmdEdit } from "./commands/edit";
 
 async function main(): Promise<void> {
   const [cmd, ...args] = process.argv.slice(2);
@@ -42,6 +44,10 @@ async function main(): Promise<void> {
       return cmdWhoami(args);
     case "clean-old-config":
       return cmdCleanOldConfig(args);
+    case "brand":
+      return cmdBrand(args);
+    case "edit":
+      return cmdEdit(args);
     case "-h":
     case "--help":
     case "help":

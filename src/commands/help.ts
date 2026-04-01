@@ -17,6 +17,8 @@ ${BOLD}COMMANDS${RESET}
   ${CYAN}env${RESET}    <name>                  Print export statements (for eval)
   ${CYAN}usage${RESET}  [name] [--detail]       Show usage by profile
   ${CYAN}whoami${RESET}                         Print the currently active profile
+  ${CYAN}brand${RESET}  <name> [key [value]]    Get or set profile branding
+  ${CYAN}edit${RESET}   [name]                  Open agp.yaml in editor
   ${DIM}${CYAN}clean-old-config${RESET}${DIM}               Remove legacy profile.toml files (temporary)${RESET}
 
 ${BOLD}TOOLS${RESET} (for agp open)
@@ -47,6 +49,7 @@ ${BOLD}EXAMPLES${RESET}
 
 ${BOLD}ENV${RESET}
   AGP_PROFILES_DIR   Override profiles base dir (default: ~/.agent-profiles)
+  AGP_BUNDLES_DIR    Override generated app bundles dir (default: ~/Applications/AGP)
 `);
 }
 
@@ -147,6 +150,42 @@ ${BOLD}EXAMPLES${RESET}
   agp usage              # Show summary for all profiles
   agp usage personal     # Show details for 'personal' profile
   agp usage --detail     # Show detailed summary for all profiles`);
+}
+
+export function usageBrand(): void {
+  console.error(`${BOLD}agp brand${RESET} <name> [<key> [<value>]] [--unset]
+
+Manage branding for a profile. Interface follows git-config semantics:
+read a key by omitting value, write it by providing value, remove with --unset.
+
+${BOLD}VALID KEYS${RESET}
+  icon_color    Hex accent color used for icon tinting (e.g. #0066CC)
+  display_name  Display name for derived app bundles
+  icon_mode     Icon transformation: tint | replace | none
+  icon_source   Path to custom icon source file
+
+${BOLD}OPTIONS${RESET}
+  --unset   Remove the specified key
+
+${BOLD}EXAMPLES${RESET}
+  agp brand work                              # show all branding
+  agp brand work icon_color                   # read a value
+  agp brand work icon_color "#0066CC"         # set a value
+  agp brand work display_name "Claude · Work"
+  agp brand work icon_color --unset           # remove a value`);
+}
+
+export function usageEdit(): void {
+  console.error(`${BOLD}agp edit${RESET} [name]
+
+Open the agp.yaml configuration file in your default editor.
+Uses $VISUAL, $EDITOR, or falls back to code, nano, or vi.
+
+If a profile name is provided, a hint is shown to help locate it in the file.
+
+${BOLD}EXAMPLES${RESET}
+  agp edit
+  agp edit work`);
 }
 
 export function usageCleanOldConfig(): void {

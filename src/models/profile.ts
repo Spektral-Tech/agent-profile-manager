@@ -3,10 +3,25 @@ import { PROFILES_DIR, PROFILE_SUBDIRS, RESERVED_NAMES } from "../lib/config";
 import { configProfileExists, getProfile, addProfile } from "../lib/agpConfig";
 import { error } from "../ui/output";
 
+export interface ProfileBranding {
+  icon_color?: string;    // hex e.g. "#0066CC" — used for icon tinting
+  display_name?: string;  // derived app display name override
+  icon_mode?: "tint" | "replace" | "none";
+  icon_source?: string;   // path to custom icon source
+}
+
+export const BRANDING_KEYS: ReadonlySet<string> = new Set([
+  "icon_color",
+  "display_name",
+  "icon_mode",
+  "icon_source",
+]);
+
 export interface Profile {
   name: string;
   description: string;
   created: string;
+  branding?: ProfileBranding;
 }
 
 export function validateName(name: string): void {

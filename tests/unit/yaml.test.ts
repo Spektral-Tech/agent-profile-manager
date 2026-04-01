@@ -63,4 +63,90 @@ describe("serializeYaml / parseYaml", () => {
     expect(result.profiles).toHaveLength(1);
     expect(result.profiles[0].name).toBe("foo");
   });
+
+  test("round-trip preserves branding block", () => {
+    const cfg: AgpConfig = {
+      version: "1",
+      profiles: [
+        {
+          name: "work",
+          description: "Work account",
+          created: "2026-01-01T00:00:00Z",
+          branding: { icon_color: "#0066CC", display_name: "Claude · Work", icon_mode: "tint" },
+        },
+      ],
+    };
+    const result = parseYaml(serializeYaml(cfg));
+    expect(result.profiles[0].branding).toEqual(cfg.profiles[0].branding);
+  });
+
+  test("serialized branding block has correct indentation", () => {
+    const cfg: AgpConfig = {
+      version: "1",
+      profiles: [
+        {
+          name: "p",
+          description: "",
+          created: "2026-01-01T00:00:00Z",
+          branding: { icon_color: "#FF0000" },
+        },
+      ],
+    };
+    const yaml = serializeYaml(cfg);
+    expect(yaml).toContain("    branding:");
+    expect(yaml).toContain('      icon_color: "#FF0000"');
+  });
+
+  test("branding block is omitted when not set", () => {
+    const cfg: AgpConfig = {
+      version: "1",
+      profiles: [{ name: "p", description: "", created: "2026-01-01T00:00:00Z" }],
+    };
+    const yaml = serializeYaml(cfg);
+    expect(yaml).not.toContain("branding");
+  });
+
+  test("branding block is omitted when empty object", () => {
+    const cfg: AgpConfig = {
+      version: "1",
+      profiles: [{ name: "p", description: "", created: "2026-01-01T00:00:00Z", branding: {} }],
+    };
+    const yaml = serializeYaml(cfg);
+    expect(yaml).not.toContain("branding");
+  });
+
+  test("profile after branded profile parses correctly", () => {
+    const cfg: AgpConfig = {
+      version: "1",
+      profiles: [
+        {
+          name: "a",
+          description: "",
+          created: "2026-01-01T00:00:00Z",
+          branding: { icon_color: "#AABBCC" },
+        },
+        { name: "b", description: "second", created: "2026-01-02T00:00:00Z" },
+      ],
+    };
+    const result = parseYaml(serializeYaml(cfg));
+    expect(result.profiles[0].branding?.icon_color).toBe("#AABBCC");
+    expect(result.profiles[1].name).toBe("b");
+    expect(result.profiles[1].branding).toBeUndefined();
+  });
+
+  test("icon_source is preserved in round-trip", () => {
+    const cfg: AgpConfig = {
+      version: "1",
+      profiles: [
+        {
+          name: "p",
+          description: "",
+          created: "2026-01-01T00:00:00Z",
+          branding: { icon_source: "/path/to/icon.png" },
+        },
+      ],
+    };
+    const result = parseYaml(serializeYaml(cfg));
+    expect(result.profiles[0].branding?.icon_source).toBe("/path/to/icon.png");
+  });
 });

@@ -1,5 +1,5 @@
 import { listProfiles } from "../lib/agpConfig";
-import { BOLD, DIM, GREEN, RESET, WHITE } from "../ui/colors";
+import { BOLD, DIM, GREEN, RESET, WHITE, hexColor } from "../ui/colors";
 import { info } from "../ui/output";
 
 export async function cmdList(_args: string[]): Promise<void> {
@@ -24,15 +24,17 @@ export async function cmdList(_args: string[]): Promise<void> {
   for (const profile of profiles) {
     const desc = profile.description || "";
     const created = profile.created ? profile.created.split("T")[0] : "?";
+    const iconColor = profile.branding?.icon_color;
+    const swatch = iconColor ? `${hexColor(iconColor)}●${RESET} ` : "  ";
 
     if (profile.name === active) {
       const marker = `${GREEN}*${RESET} `;
       console.error(
-        `${GREEN}${marker}${profile.name.padEnd(nameW - 2)}${RESET}  ${desc.padEnd(descW)}  ${DIM}${created}${RESET}`,
+        `${GREEN}${marker}${swatch}${profile.name.padEnd(nameW - 4)}${RESET}  ${desc.padEnd(descW)}  ${DIM}${created}${RESET}`,
       );
     } else {
       console.error(
-        `  ${profile.name.padEnd(nameW - 2)}  ${desc.padEnd(descW)}  ${DIM}${created}${RESET}`,
+        `  ${swatch}${profile.name.padEnd(nameW - 4)}  ${desc.padEnd(descW)}  ${DIM}${created}${RESET}`,
       );
     }
   }

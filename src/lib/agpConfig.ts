@@ -14,7 +14,7 @@ function profilesDir(): string {
   return process.env.AGP_PROFILES_DIR ?? `${process.env.HOME}/.agent-profiles`;
 }
 
-function configPath(): string {
+export function configPath(): string {
   return join(profilesDir(), CONFIG_FILE);
 }
 
@@ -153,6 +153,14 @@ export async function addProfile(profile: Profile): Promise<void> {
 export async function removeProfile(name: string): Promise<void> {
   const config = await loadConfig();
   config.profiles = config.profiles.filter((p) => p.name !== name);
+  await saveConfig(config);
+}
+
+export async function updateProfile(name: string, updates: Partial<Profile>): Promise<void> {
+  const config = await loadConfig();
+  const idx = config.profiles.findIndex((p) => p.name === name);
+  if (idx === -1) return;
+  config.profiles[idx] = { ...config.profiles[idx], ...updates };
   await saveConfig(config);
 }
 

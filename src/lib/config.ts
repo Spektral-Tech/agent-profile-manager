@@ -3,6 +3,9 @@ export const AGP_VERSION = "1.0.0";
 export const PROFILES_DIR =
   process.env.AGP_PROFILES_DIR ?? `${process.env.HOME}/.agent-profiles`;
 
+export const BUNDLES_DIR =
+  process.env.AGP_BUNDLES_DIR ?? `${process.env.HOME}/Applications/AGP`;
+
 export const VALID_TOOLS = [
   "claude",
   "claude-desktop",
@@ -26,6 +29,8 @@ export const RESERVED_NAMES = new Set([
   "env",
   "usage",
   "whoami",
+  "brand",
+  "edit",
   "install",
   "help",
 ]);
