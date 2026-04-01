@@ -77,6 +77,9 @@ agp env work
 # View usage summary
 agp usage
 agp usage personal
+
+# Check which profile is currently active
+agp whoami
 ```
 
 ## Commands
@@ -133,6 +136,16 @@ Print shell export statements for use with `eval` or `.envrc` files.
 ```bash
 eval "$(agp env work)"
 agp env personal >> .envrc
+```
+
+### `agp whoami`
+
+Print the name of the currently active profile. Exits with a non-zero status if not inside a profile context.
+
+```bash
+agp whoami
+# Inside a profile shell: prints the profile name
+# Outside any profile: prints an error and exits 1
 ```
 
 ### `agp delete <name> [-f]`
@@ -298,7 +311,7 @@ Profile names must contain only:
 - Numbers (0-9)
 - Hyphens and underscores (-_)
 
-These names are reserved: `list`, `create`, `delete`, `open`, `shell`, `env`, `install`, `help`
+These names are reserved: `list`, `create`, `delete`, `open`, `shell`, `env`, `usage`, `whoami`, `install`, `help`
 
 ## Tips & Troubleshooting
 

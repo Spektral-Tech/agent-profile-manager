@@ -16,6 +16,7 @@ ${BOLD}COMMANDS${RESET}
   ${CYAN}shell${RESET}  <name>                  Start a shell with profile env
   ${CYAN}env${RESET}    <name>                  Print export statements (for eval)
   ${CYAN}usage${RESET}  [name] [--detail]       Show usage by profile
+  ${CYAN}whoami${RESET}                         Print the currently active profile
   ${DIM}${CYAN}clean-old-config${RESET}${DIM}               Remove legacy profile.toml files (temporary)${RESET}
 
 ${BOLD}TOOLS${RESET} (for agp open)
@@ -119,6 +120,17 @@ Designed for use with eval to load a profile into the current shell session.
 ${BOLD}EXAMPLES${RESET}
   eval "$(agp env personal)"
   agp env work >> .envrc`);
+}
+
+export function usageWhoami(): void {
+  console.error(`${BOLD}agp whoami${RESET}
+
+Print the name of the currently active AGP profile.
+Exits with a non-zero status if not inside a profile context.
+
+${BOLD}EXAMPLES${RESET}
+  agp whoami
+  agp shell personal && agp whoami  # prints: personal`);
 }
 
 export function usageUsage(): void {

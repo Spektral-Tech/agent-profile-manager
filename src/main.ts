@@ -10,6 +10,7 @@ import { cmdOpen } from "./commands/open";
 import { cmdShell } from "./commands/shell";
 import { cmdEnv } from "./commands/env";
 import { cmdUsage } from "./commands/usage";
+import { cmdWhoami } from "./commands/whoami";
 import { cmdCleanOldConfig } from "./commands/clean-old-config";
 
 async function main(): Promise<void> {
@@ -37,6 +38,8 @@ async function main(): Promise<void> {
       return cmdEnv(args);
     case "usage":
       return cmdUsage(args);
+    case "whoami":
+      return cmdWhoami(args);
     case "clean-old-config":
       return cmdCleanOldConfig(args);
     case "-h":
