@@ -10,6 +10,7 @@ import { cmdOpen } from "./commands/open";
 import { cmdShell } from "./commands/shell";
 import { cmdEnv } from "./commands/env";
 import { cmdUsage } from "./commands/usage";
+import { cmdWhoami } from "./commands/whoami";
 
 async function main(): Promise<void> {
   const [cmd, ...args] = process.argv.slice(2);
@@ -36,6 +37,8 @@ async function main(): Promise<void> {
       return cmdEnv(args);
     case "usage":
       return cmdUsage(args);
+    case "whoami":
+      return cmdWhoami(args);
     case "-h":
     case "--help":
     case "help":

@@ -25,6 +25,7 @@ export const RESERVED_NAMES = new Set([
   "shell",
   "env",
   "usage",
+  "whoami",
   "install",
   "help",
 ]);
