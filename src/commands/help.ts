@@ -16,7 +16,6 @@ ${BOLD}COMMANDS${RESET}
   ${CYAN}shell${RESET}  <name>                  Start a shell with profile env
   ${CYAN}env${RESET}    <name>                  Print export statements (for eval)
   ${CYAN}usage${RESET}  [name] [--detail]       Show usage by profile
-  ${CYAN}install${RESET}                        Symlink agp to ~/.local/bin/agp
 
 ${BOLD}TOOLS${RESET} (for agp open)
   claude          Claude CLI
