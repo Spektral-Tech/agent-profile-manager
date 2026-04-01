@@ -18,6 +18,7 @@ ${BOLD}COMMANDS${RESET}
   ${CYAN}usage${RESET}  [name] [--detail]       Show usage by profile
   ${CYAN}whoami${RESET}                         Print the currently active profile
   ${CYAN}brand${RESET}  <name> [key [value]]    Get or set profile branding
+  ${CYAN}bundle${RESET} <name> <tool> [--force] Generate a branded .app bundle
   ${CYAN}edit${RESET}   [name]                  Open agp.yaml in editor
   ${DIM}${CYAN}clean-old-config${RESET}${DIM}               Remove legacy profile.toml files (temporary)${RESET}
 
@@ -150,6 +151,33 @@ ${BOLD}EXAMPLES${RESET}
   agp usage              # Show summary for all profiles
   agp usage personal     # Show details for 'personal' profile
   agp usage --detail     # Show detailed summary for all profiles`);
+}
+
+export function usageBundle(): void {
+  console.error(`${BOLD}agp bundle${RESET} <profile> <tool> [--force]
+${BOLD}agp bundle${RESET} <profile> --all [--force]
+
+Generate a branded macOS .app bundle for a profile. The bundle is placed in
+AGP_BUNDLES_DIR (default: ~/Applications/AGP/<profile>/) and can be pinned
+to the Dock for one-click profile launching.
+
+The derived bundle has a unique bundle identifier so macOS treats it as a
+separate app in Cmd+Tab, Mission Control, and the Dock.
+
+If the profile has ${CYAN}branding.icon_color${RESET} set, the app icon is tinted with
+that color. If ${CYAN}branding.display_name${RESET} is set, it becomes the app name.
+
+${BOLD}DESKTOP TOOLS${RESET}
+  claude-desktop   codex-desktop   gemini-desktop   antigravity
+
+${BOLD}OPTIONS${RESET}
+  --all     Generate bundles for all installed desktop tools
+  --force   Overwrite existing bundle
+
+${BOLD}EXAMPLES${RESET}
+  agp bundle work claude-desktop
+  agp bundle work --all
+  agp bundle personal claude-desktop --force`);
 }
 
 export function usageBrand(): void {

@@ -13,6 +13,7 @@ import { cmdUsage } from "./commands/usage";
 import { cmdWhoami } from "./commands/whoami";
 import { cmdCleanOldConfig } from "./commands/clean-old-config";
 import { cmdBrand } from "./commands/brand";
+import { cmdBundle } from "./commands/bundle";
 import { cmdEdit } from "./commands/edit";
 
 async function main(): Promise<void> {
@@ -46,6 +47,8 @@ async function main(): Promise<void> {
       return cmdCleanOldConfig(args);
     case "brand":
       return cmdBrand(args);
+    case "bundle":
+      return cmdBundle(args);
     case "edit":
       return cmdEdit(args);
     case "-h":

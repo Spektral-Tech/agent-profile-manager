@@ -13,6 +13,17 @@ export async function execCli(
   process.exit(code);
 }
 
+export function openBundleApp(
+  bundlePath: string,
+  profileDir: string,
+): void {
+  const proc = Bun.spawn(
+    ["open", "-n", bundlePath, "--args", `--user-data-dir=${profileDir}`],
+    { stdout: "ignore", stderr: "ignore" },
+  );
+  proc.unref();
+}
+
 export function openDesktopApp(
   appName: string,
   profileDir: string,

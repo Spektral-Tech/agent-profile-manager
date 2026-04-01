@@ -30,6 +30,7 @@ export const RESERVED_NAMES = new Set([
   "usage",
   "whoami",
   "brand",
+  "bundle",
   "edit",
   "install",
   "help",

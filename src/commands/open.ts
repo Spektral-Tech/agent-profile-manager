@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { VALID_TOOLS, type ToolName } from "../lib/config";
-import { execCli, launchCodexDesktop, openDesktopApp } from "../lib/process";
+import { execCli, launchCodexDesktop, openDesktopApp, openBundleApp } from "../lib/process";
+import { bundleExists, bundlePath } from "../lib/bundle";
 import { dirExists, profilePath } from "../models/profile";
 import { appInstalled, cliInstalled, findAppPath, TOOL_DEFS } from "../models/tools";
 import { BOLD, DIM, RESET, YELLOW } from "../ui/colors";
@@ -68,6 +69,13 @@ export async function cmdOpen(args: string[]): Promise<void> {
 
   // Desktop tools
   if (tool === "codex-desktop") {
+    if (bundleExists(name, "Codex")) {
+      const bPath = bundlePath(name, "Codex");
+      warnFirstLogin(profileDir);
+      info(`Opening bundled Codex for profile '${name}'`);
+      openBundleApp(bPath, profileDir);
+      return;
+    }
     if (!appInstalled("Codex")) {
       error("Codex not found in /Applications or ~/Applications.");
     }
@@ -80,6 +88,13 @@ export async function cmdOpen(args: string[]): Promise<void> {
   }
 
   if (tool === "gemini-desktop") {
+    if (bundleExists(name, "Gemini")) {
+      const bPath = bundlePath(name, "Gemini");
+      warnFirstLogin(profileDir);
+      info(`Opening bundled Gemini for profile '${name}'`);
+      openBundleApp(bPath, profileDir);
+      return;
+    }
     if (appInstalled("Gemini")) {
       warnFirstLogin(profileDir);
       info(`Opening Gemini with profile at ${profileDir}`);
@@ -92,6 +107,13 @@ export async function cmdOpen(args: string[]): Promise<void> {
 
   // Generic desktop: claude-desktop, antigravity
   if (def.kind === "desktop") {
+    if (bundleExists(name, def.appName!)) {
+      const bPath = bundlePath(name, def.appName!);
+      warnFirstLogin(profileDir);
+      info(`Opening bundled ${def.appName} for profile '${name}'`);
+      openBundleApp(bPath, profileDir);
+      return;
+    }
     if (!appInstalled(def.appName!)) {
       error(`${def.appName} not found in /Applications or ~/Applications.`);
     }
