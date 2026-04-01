@@ -160,17 +160,70 @@ agp usage --detail         # Show detailed breakdown of all profiles
 - **Usage**: Total completed turns/interactions per profile
 - **Last Activity**: Most recent session activity timestamp
 
+### `agp clean-old-config`
+
+> **Temporary command** — will be removed in a future version of agp.
+
+Removes legacy `profile.toml` files from all profiles that have already been migrated to `agp.yaml`. Only run this when you are ready to stop using the bash version of agp entirely.
+
+```bash
+agp clean-old-config
+```
+
+## Configuration
+
+### agp.yaml
+
+Profile metadata is stored in a single centralized YAML file at `~/.agent-profiles/agp.yaml`. This is the canonical source of truth for all profile definitions.
+
+```yaml
+version: "1"
+profiles:
+  - name: personal
+    description: Personal AI workspace
+    created: "2026-01-01T00:00:00Z"
+  - name: work
+    description: Work account
+    created: "2026-01-02T00:00:00Z"
+```
+
+**Fields:**
+
+| Field | Type | Description |
+|---|---|---|
+| `version` | string | Config schema version. Currently `"1"`. |
+| `profiles` | list | List of profile definitions. |
+| `profiles[].name` | string | Unique profile identifier. Letters, numbers, hyphens, underscores only. |
+| `profiles[].description` | string | Human-readable description. May be empty. |
+| `profiles[].created` | string | ISO 8601 creation timestamp. |
+
+The file is managed automatically by the CLI. You can inspect or back it up directly, but editing it by hand is generally not needed.
+
+### Migrating from legacy profile.toml
+
+Previous versions of `agp` stored metadata in per-profile `profile.toml` files. The CLI automatically migrates these to `agp.yaml` on first use — no manual action required.
+
+Legacy files are **not deleted** during migration so the bash `agp` script can continue to work alongside the TypeScript CLI. Once you no longer need the bash version, run `agp clean-old-config` to remove the old files.
+
+While both formats coexist, `agp` will warn you that changes made via the bash script to `profile.toml` will not be reflected in `agp.yaml`.
+
 ## Profile Structure
 
 Each profile is stored at `~/.agent-profiles/<name>/`:
 
 ```
-~/.agent-profiles/personal/
-├── profile.toml    # Metadata (name, description, creation date)
-├── claude/         # Claude CLI config + Desktop app data
-├── codex/          # Codex CLI config + Desktop app data
-├── gemini/         # Gemini CLI config
-└── antigravity/    # Antigravity app data
+~/.agent-profiles/
+├── agp.yaml            # Centralized config (all profile metadata)
+├── personal/
+│   ├── claude/         # Claude CLI config + Desktop app data
+│   ├── codex/          # Codex CLI config + Desktop app data
+│   ├── gemini/         # Gemini CLI config
+│   └── antigravity/    # Antigravity app data
+└── work/
+    ├── claude/
+    ├── codex/
+    ├── gemini/
+    └── antigravity/
 ```
 
 ## Environment Variables
