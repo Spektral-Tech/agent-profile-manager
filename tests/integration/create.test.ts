@@ -11,7 +11,9 @@ describe("agp create", () => {
         { env: { ...process.env, AGP_PROFILES_DIR: dir } },
       );
       expect(result.exitCode).toBe(0);
-      expect(existsSync(join(dir, "test-profile", "profile.toml"))).toBe(true);
+      expect(existsSync(join(dir, "agp.yaml"))).toBe(true);
+      expect(await Bun.file(join(dir, "agp.yaml")).text()).toContain("test-profile");
+      expect(existsSync(join(dir, "test-profile", "profile.toml"))).toBe(false);
       expect(existsSync(join(dir, "test-profile", "claude"))).toBe(true);
       expect(existsSync(join(dir, "test-profile", "codex"))).toBe(true);
       expect(existsSync(join(dir, "test-profile", "gemini"))).toBe(true);

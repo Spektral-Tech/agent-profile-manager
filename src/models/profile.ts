@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { PROFILES_DIR, PROFILE_SUBDIRS, RESERVED_NAMES } from "../lib/config";
-import { readToml, writeToml } from "../lib/toml";
+import { configProfileExists, getProfile, addProfile } from "../lib/agpConfig";
 import { error } from "../ui/output";
 
 export interface Profile {
@@ -25,7 +25,7 @@ export function profilePath(name: string): string {
 }
 
 export async function profileExists(name: string): Promise<boolean> {
-  return Bun.file(join(profilePath(name), "profile.toml")).exists();
+  return configProfileExists(name);
 }
 
 export async function dirExists(name: string): Promise<boolean> {
@@ -34,22 +34,17 @@ export async function dirExists(name: string): Promise<boolean> {
 }
 
 export async function readProfile(name: string): Promise<Profile> {
-  const tomlPath = join(profilePath(name), "profile.toml");
-  const data = await readToml(tomlPath);
-  return {
-    name: data.name ?? name,
-    description: data.description ?? "",
-    created: data.created ?? "",
-  };
+  const p = await getProfile(name);
+  return p ?? { name, description: "", created: "" };
 }
 
 export async function writeProfile(
-  dir: string,
+  _dir: string,
   name: string,
   description: string,
 ): Promise<void> {
   const created = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-  await writeToml(dir, { name, description, created });
+  await addProfile({ name, description, created });
 }
 
 export function profileEnvVars(

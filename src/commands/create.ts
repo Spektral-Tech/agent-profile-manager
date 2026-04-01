@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { PROFILE_SUBDIRS } from "../lib/config";
 import { ensureDir } from "../lib/fs";
-import { profilePath, profileExists, validateName, writeProfile, dirExists } from "../models/profile";
+import { profilePath, profileExists, validateName, writeProfile } from "../models/profile";
 import { dim, error, success } from "../ui/output";
 
 export async function cmdCreate(args: string[]): Promise<void> {
@@ -30,7 +30,7 @@ export async function cmdCreate(args: string[]): Promise<void> {
 
   validateName(name);
 
-  if (await dirExists(name)) {
+  if (await profileExists(name)) {
     error(`Profile '${name}' already exists. Run 'agp list' to see all profiles.`);
   }
 

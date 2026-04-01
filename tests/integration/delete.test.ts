@@ -16,6 +16,8 @@ describe("agp delete", () => {
       );
       expect(result.exitCode).toBe(0);
       expect(existsSync(join(dir, "to-delete"))).toBe(false);
+      const yaml = await Bun.file(join(dir, "agp.yaml")).text();
+      expect(yaml).not.toContain("to-delete");
     });
   });
 
