@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { ToolName } from "../lib/config";
+import { commandExists } from "../lib/process";
 
 export interface ToolDef {
   name: ToolName;
@@ -74,14 +75,6 @@ export function appInstalled(appName: string): boolean {
   return findAppPath(appName) !== null;
 }
 
-export function cliInstalled(binary: string): boolean {
-  try {
-    const result = Bun.spawnSync(["which", binary], {
-      stdout: "ignore",
-      stderr: "ignore",
-    });
-    return result.exitCode === 0;
-  } catch {
-    return false;
-  }
+export async function cliInstalled(binary: string): Promise<boolean> {
+  return commandExists(binary);
 }

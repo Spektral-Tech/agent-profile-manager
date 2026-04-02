@@ -1,6 +1,6 @@
 import { mkdtemp, rm } from "node:fs/promises";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { resetConfig } from "../../src/lib/agpConfig";
 
 export async function withTempProfiles(

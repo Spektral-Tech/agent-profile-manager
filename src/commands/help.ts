@@ -17,7 +17,6 @@ ${BOLD}COMMANDS${RESET}
   ${CYAN}env${RESET}    <name>                  Print export statements (for eval)
   ${CYAN}usage${RESET}  [name] [--detail]       Show usage by profile
   ${CYAN}whoami${RESET}                         Print the currently active profile
-  ${DIM}${CYAN}clean-old-config${RESET}${DIM}               Remove legacy profile.toml files (temporary)${RESET}
 
 ${BOLD}TOOLS${RESET} (for agp open)
   claude          Claude CLI
@@ -29,12 +28,13 @@ ${BOLD}TOOLS${RESET} (for agp open)
   antigravity     Antigravity Desktop app (Google)
 
 ${BOLD}PROFILE STRUCTURE${RESET}
-  ${PROFILES_DIR}/<name>/
-  ├── profile.toml    metadata
-  ├── claude/         Claude context (CLI + desktop)
-  ├── codex/          Codex context (CLI + desktop)
-  ├── gemini/         Gemini CLI context
-  └── antigravity/    Antigravity context
+  ${PROFILES_DIR}/
+  ├── agp.yaml        central metadata
+  └── <name>/
+      ├── claude/         Claude context (CLI + desktop)
+      ├── codex/          Codex context (CLI + desktop)
+      ├── gemini/         Gemini CLI context
+      └── antigravity/    Antigravity context
 
 ${BOLD}EXAMPLES${RESET}
   agp create personal --desc "Personal AI workspace"
@@ -147,20 +147,4 @@ ${BOLD}EXAMPLES${RESET}
   agp usage              # Show summary for all profiles
   agp usage personal     # Show details for 'personal' profile
   agp usage --detail     # Show detailed summary for all profiles`);
-}
-
-export function usageCleanOldConfig(): void {
-  console.error(`${BOLD}agp clean-old-config${RESET}
-
-${DIM}Temporary command — to be removed in a future version of agp.${RESET}
-
-Removes legacy profile.toml files from all profiles that have already been
-migrated to agp.yaml. After running this, the bash agp script will no longer
-be able to read or update those profiles.
-
-Only run this command when you are ready to stop using the bash version of agp
-and rely exclusively on the TypeScript CLI.
-
-${BOLD}EXAMPLES${RESET}
-  agp clean-old-config`);
 }

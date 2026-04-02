@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { TOOL_DEFS } from "../../src/models/tools";
 import { VALID_TOOLS } from "../../src/lib/config";
+import { TOOL_DEFS } from "../../src/models/tools";
 
 describe("TOOL_DEFS", () => {
   test("has a definition for every valid tool", () => {
@@ -19,7 +19,9 @@ describe("TOOL_DEFS", () => {
   });
 
   test("desktop tools have appName", () => {
-    const desktopTools = Object.values(TOOL_DEFS).filter((t) => t.kind === "desktop");
+    const desktopTools = Object.values(TOOL_DEFS).filter(
+      (t) => t.kind === "desktop",
+    );
     for (const tool of desktopTools) {
       expect(tool.appName).toBeTruthy();
     }

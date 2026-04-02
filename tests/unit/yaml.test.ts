@@ -5,8 +5,16 @@ import type { AgpConfig } from "../../src/lib/yaml";
 const sample: AgpConfig = {
   version: "1",
   profiles: [
-    { name: "work", description: "Work account", created: "2026-01-01T00:00:00Z" },
-    { name: "personal", description: "Personal workspace", created: "2026-01-02T00:00:00Z" },
+    {
+      name: "work",
+      description: "Work account",
+      created: "2026-01-01T00:00:00Z",
+    },
+    {
+      name: "personal",
+      description: "Personal workspace",
+      created: "2026-01-02T00:00:00Z",
+    },
   ],
 };
 
@@ -28,7 +36,9 @@ describe("serializeYaml / parseYaml", () => {
   test("profile with empty description", () => {
     const cfg: AgpConfig = {
       version: "1",
-      profiles: [{ name: "test", description: "", created: "2026-01-01T00:00:00Z" }],
+      profiles: [
+        { name: "test", description: "", created: "2026-01-01T00:00:00Z" },
+      ],
     };
     const result = parseYaml(serializeYaml(cfg));
     expect(result.profiles[0].description).toBe("");
@@ -43,7 +53,13 @@ describe("serializeYaml / parseYaml", () => {
   test("description with colon is quoted in output", () => {
     const cfg: AgpConfig = {
       version: "1",
-      profiles: [{ name: "test", description: "key: value", created: "2026-01-01T00:00:00Z" }],
+      profiles: [
+        {
+          name: "test",
+          description: "key: value",
+          created: "2026-01-01T00:00:00Z",
+        },
+      ],
     };
     const yaml = serializeYaml(cfg);
     expect(yaml).toContain('description: "key: value"');

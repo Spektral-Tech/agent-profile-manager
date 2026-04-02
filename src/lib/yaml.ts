@@ -12,10 +12,9 @@ export function parseYaml(text: string): AgpConfig {
   for (const raw of text.split("\n")) {
     const line = raw.trimEnd();
 
-    let m: RegExpMatchArray | null;
-
-    if ((m = line.match(/^version:\s*["']?(.+?)["']?\s*$/))) {
-      config.version = m[1];
+    const versionMatch = line.match(/^version:\s*["']?(.+?)["']?\s*$/);
+    if (versionMatch) {
+      config.version = versionMatch[1];
       continue;
     }
 
@@ -23,26 +22,31 @@ export function parseYaml(text: string): AgpConfig {
       continue;
     }
 
-    if ((m = line.match(/^  - name:\s+(.+)$/))) {
+    const nameMatch = line.match(/^ {2}- name:\s+(.+)$/);
+    if (nameMatch) {
       if (current) config.profiles.push(current as Profile);
-      current = { name: m[1].trim(), description: "", created: "" };
+      current = { name: nameMatch[1].trim(), description: "", created: "" };
       continue;
     }
 
     if (current) {
-      if ((m = line.match(/^    description:\s*(.*)$/))) {
-        let val = m[1].trim();
+      const descriptionMatch = line.match(/^ {4}description:\s*(.*)$/);
+      if (descriptionMatch) {
+        let val = descriptionMatch[1].trim();
         // strip surrounding quotes if present
-        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        if (
+          (val.startsWith('"') && val.endsWith('"')) ||
+          (val.startsWith("'") && val.endsWith("'"))
+        ) {
           val = val.slice(1, -1);
         }
         current.description = val;
         continue;
       }
 
-      if ((m = line.match(/^    created:\s*["']?(.+?)["']?\s*$/))) {
-        current.created = m[1].trim();
-        continue;
+      const createdMatch = line.match(/^ {4}created:\s*["']?(.+?)["']?\s*$/);
+      if (createdMatch) {
+        current.created = createdMatch[1].trim();
       }
     }
     // unknown lines silently skipped
@@ -61,10 +65,12 @@ export function serializeYaml(config: AgpConfig): string {
 
   for (const p of config.profiles) {
     lines.push(`  - name: ${p.name}`);
-    const desc = needsQuoting(p.description) ? `"${p.description.replace(/"/g, '\\"')}"` : p.description;
+    const desc = needsQuoting(p.description)
+      ? `"${p.description.replace(/"/g, '\\"')}"`
+      : p.description;
     lines.push(`    description: ${desc}`);
     lines.push(`    created: "${p.created}"`);
   }
 
-  return lines.join("\n") + "\n";
+  return `${lines.join("\n")}\n`;
 }

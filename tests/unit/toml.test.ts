@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
-import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { writeToml, readToml } from "../../src/lib/toml";
+import { join } from "node:path";
+import { readToml, writeToml } from "../../src/lib/toml";
 
 describe("toml", () => {
   test("write and read round-trip", async () => {
@@ -32,7 +32,11 @@ describe("toml", () => {
   test("handles empty description", async () => {
     const dir = await mkdtemp(join(tmpdir(), "toml-test-"));
     try {
-      await writeToml(dir, { name: "test", description: "", created: "2026-01-01T00:00:00Z" });
+      await writeToml(dir, {
+        name: "test",
+        description: "",
+        created: "2026-01-01T00:00:00Z",
+      });
       const result = await readToml(join(dir, "profile.toml"));
       expect(result.name).toBe("test");
       expect(result.description).toBe("");

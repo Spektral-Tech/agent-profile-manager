@@ -15,7 +15,12 @@ export const VALID_TOOLS = [
 
 export type ToolName = (typeof VALID_TOOLS)[number];
 
-export const PROFILE_SUBDIRS = ["claude", "codex", "gemini", "antigravity"] as const;
+export const PROFILE_SUBDIRS = [
+  "claude",
+  "codex",
+  "gemini",
+  "antigravity",
+] as const;
 
 export const RESERVED_NAMES = new Set([
   "list",

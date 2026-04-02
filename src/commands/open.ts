@@ -1,9 +1,14 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { VALID_TOOLS, type ToolName } from "../lib/config";
+import { type ToolName, VALID_TOOLS } from "../lib/config";
 import { execCli, launchCodexDesktop, openDesktopApp } from "../lib/process";
 import { dirExists, profilePath } from "../models/profile";
-import { appInstalled, cliInstalled, findAppPath, TOOL_DEFS } from "../models/tools";
+import {
+  TOOL_DEFS,
+  appInstalled,
+  cliInstalled,
+  findAppPath,
+} from "../models/tools";
 import { BOLD, DIM, RESET, YELLOW } from "../ui/colors";
 import { error, info, warn } from "../ui/output";
 
@@ -21,10 +26,10 @@ function warnFirstLogin(providerDir: string): void {
       `${DIM}  1. Temporarily set your default browser to a secondary browser`,
     );
     console.error(
-      `     (System Settings → Desktop & Dock → Default web browser)`,
+      "     (System Settings → Desktop & Dock → Default web browser)",
     );
     console.error(
-      `  2. Click Sign In — authenticate in that secondary browser`,
+      "  2. Click Sign In — authenticate in that secondary browser",
     );
     console.error(`  3. Restore your original default browser\n${RESET}`);
   }
@@ -41,7 +46,9 @@ export async function cmdOpen(args: string[]): Promise<void> {
   }
 
   if (!(await dirExists(name))) {
-    error(`Profile '${name}' not found. Run 'agp list' to see available profiles.`);
+    error(
+      `Profile '${name}' not found. Run 'agp list' to see available profiles.`,
+    );
   }
 
   if (!VALID_TOOLS.includes(tool as ToolName)) {
@@ -54,16 +61,23 @@ export async function cmdOpen(args: string[]): Promise<void> {
   const extraArgs = args.slice(2);
 
   if (def.kind === "cli") {
-    if (!cliInstalled(def.binary!)) {
+    const binary = def.binary;
+    const envVar = def.envVar;
+
+    if (!binary || !envVar) {
+      error(`Tool '${tool}' is missing CLI configuration.`);
+    }
+
+    if (!(await cliInstalled(binary))) {
       const hints: Record<string, string> = {
         claude: "Install from https://claude.ai/download",
         codex: "Install with: npm install -g @openai/codex",
         gemini: "Install with: npm install -g @google/gemini-cli",
       };
-      error(`'${def.binary}' CLI not found. ${hints[def.binary!] ?? ""}`);
+      error(`'${binary}' CLI not found. ${hints[binary] ?? ""}`);
     }
-    info(`Opening ${def.binary} CLI under profile '${name}'`);
-    await execCli(def.binary!, extraArgs, { [def.envVar!]: profileDir });
+    info(`Opening ${binary} CLI under profile '${name}'`);
+    await execCli(binary, extraArgs, { [envVar]: profileDir });
   }
 
   // Desktop tools
@@ -71,7 +85,10 @@ export async function cmdOpen(args: string[]): Promise<void> {
     if (!appInstalled("Codex")) {
       error("Codex not found in /Applications or ~/Applications.");
     }
-    const appPath = findAppPath("Codex")!;
+    const appPath = findAppPath("Codex");
+    if (!appPath) {
+      error("Codex not found in /Applications or ~/Applications.");
+    }
     const codexBin = join(appPath, "Contents", "MacOS", "Codex");
     warnFirstLogin(profileDir);
     info(`Opening Codex with profile '${name}'`);
@@ -85,18 +102,25 @@ export async function cmdOpen(args: string[]): Promise<void> {
       info(`Opening Gemini with profile at ${profileDir}`);
       openDesktopApp("Gemini", profileDir);
     } else {
-      warn(`Gemini Desktop app not found. Try 'agp open ${name} antigravity' instead.`);
+      warn(
+        `Gemini Desktop app not found. Try 'agp open ${name} antigravity' instead.`,
+      );
     }
     return;
   }
 
   // Generic desktop: claude-desktop, antigravity
   if (def.kind === "desktop") {
-    if (!appInstalled(def.appName!)) {
-      error(`${def.appName} not found in /Applications or ~/Applications.`);
+    const appName = def.appName;
+    if (!appName) {
+      error(`Tool '${tool}' is missing desktop app configuration.`);
+    }
+
+    if (!appInstalled(appName)) {
+      error(`${appName} not found in /Applications or ~/Applications.`);
     }
     warnFirstLogin(profileDir);
-    info(`Opening ${def.appName} with profile at ${profileDir}`);
-    openDesktopApp(def.appName!, profileDir);
+    info(`Opening ${appName} with profile at ${profileDir}`);
+    openDesktopApp(appName, profileDir);
   }
 }

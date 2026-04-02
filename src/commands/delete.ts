@@ -1,5 +1,7 @@
-import { removeDir } from "../lib/fs";
+import { stderr, stdin } from "node:process";
+import { createInterface } from "node:readline/promises";
 import { removeProfile } from "../lib/agpConfig";
+import { removeDir } from "../lib/fs";
 import { dirExists, profilePath } from "../models/profile";
 import { BOLD, DIM, RESET, YELLOW } from "../ui/colors";
 import { error, info, success } from "../ui/output";
@@ -37,12 +39,14 @@ export async function cmdDelete(args: string[]): Promise<void> {
     console.error(
       `${YELLOW}  warn${RESET}  Delete profile '${BOLD}${name}${RESET}' at ${DIM}${p}${RESET}?`,
     );
-    process.stderr.write("        This is irreversible. Type 'yes' to confirm: ");
-
-    const reader = Bun.stdin.stream().getReader();
-    const { value } = await reader.read();
-    reader.releaseLock();
-    const answer = value ? new TextDecoder().decode(value).trim() : "";
+    const rl = createInterface({
+      input: stdin,
+      output: stderr,
+    });
+    const answer = (
+      await rl.question("        This is irreversible. Type 'yes' to confirm: ")
+    ).trim();
+    rl.close();
 
     if (answer !== "yes") {
       info("Aborted.");

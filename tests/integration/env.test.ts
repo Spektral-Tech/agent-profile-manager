@@ -5,9 +5,14 @@ describe("agp env", () => {
   test("prints export statements to stdout", async () => {
     await withTempProfiles(async (dir) => {
       const env = { ...process.env, AGP_PROFILES_DIR: dir };
-      Bun.spawnSync(["bun", "run", "src/main.ts", "create", "envtest"], { env });
+      Bun.spawnSync(["bun", "run", "src/main.ts", "create", "envtest"], {
+        env,
+      });
 
-      const result = Bun.spawnSync(["bun", "run", "src/main.ts", "env", "envtest"], { env });
+      const result = Bun.spawnSync(
+        ["bun", "run", "src/main.ts", "env", "envtest"],
+        { env },
+      );
       expect(result.exitCode).toBe(0);
 
       const stdout = result.stdout.toString();

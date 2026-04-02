@@ -1,18 +1,59 @@
 {
-  "name": "agp",
+  "name": "@spektral/agent-profile-manager",
   "version": "1.0.0",
   "type": "module",
-  "module": "src/main.ts",
+  "description": "Manage isolated AI tool profiles on macOS with npm-based distribution and automated release flows.",
+  "license": "MIT",
+  "homepage": "https://github.com/Spektral-Tech/agent-profile-manager#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Spektral-Tech/agent-profile-manager.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Spektral-Tech/agent-profile-manager/issues"
+  },
+  "keywords": [
+    "agp",
+    "agent-profile-manager",
+    "claude",
+    "codex",
+    "gemini",
+    "cli",
+    "profiles"
+  ],
+  "main": "./dist/main.js",
+  "module": "./dist/main.js",
   "bin": {
-    "agp": "src/main.ts"
+    "agp": "./bin/agp.js"
+  },
+  "files": ["bin/", "dist/", "README.md", "LICENSE"],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
-    "dev": "bun run src/main.ts",
+    "dev": "bun run --watch src/main.ts",
     "test": "bun test",
-    "build": "bun build --compile --target=bun --outfile=dist/agp src/main.ts",
-    "build:minified": "bun build --compile --minify --target=bun --outfile=dist/agp src/main.ts"
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome check .",
+    "build": "node ./scripts/build.mjs",
+    "pack:check": "node ./scripts/pack-check.mjs",
+    "smoke:node": "node ./scripts/smoke-node.mjs",
+    "verify": "bun run check && bun test && bun run build && bun run smoke:node && bun run pack:check",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "changeset publish",
+    "prepare": "husky",
+    "prepublishOnly": "bun run verify"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@biomejs/biome": "1.9.4",
+    "@changesets/cli": "2.29.6",
+    "@types/bun": "1.2.11",
+    "@types/node": "22.15.3",
+    "husky": "9.1.7"
   }
 }
