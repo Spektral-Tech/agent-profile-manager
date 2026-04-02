@@ -1,12 +1,31 @@
+/**
+ * Bundle generation — wrapper approach.
+ *
+ * Instead of copying the original app (which breaks Electron's integrity
+ * check via `codesign --deep`), we scaffold a minimal wrapper .app:
+ *
+ *   ~/Applications/AGP/<profile>/<AppName>.app/
+ *   ├── Contents/
+ *   │   ├── Info.plist          (unique bundle ID + display name)
+ *   │   ├── PkgInfo             (APPL????)
+ *   │   ├── MacOS/
+ *   │   │   └── launcher        (shell script — opens the real app)
+ *   │   └── Resources/
+ *   │       └── icon.icns       (tinted copy of the original icon)
+ *
+ * The wrapper is ad-hoc signed (no --deep, no nested code objects to worry
+ * about). The original app is never touched.
+ */
+
 import { join } from "node:path";
 import { existsSync } from "node:fs";
-import { mkdtemp, readdir, rm, unlink } from "node:fs/promises";
+import { mkdtemp, readdir, rm, unlink, cp, chmod } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { BUNDLES_DIR } from "./config";
+import { BUNDLES_DIR, PROFILES_DIR } from "./config";
 import { ensureDir } from "./fs";
 import type { Profile } from "../models/profile";
 import type { ToolDef } from "../models/tools";
-import { warn } from "../ui/output";
+import { info, warn } from "../ui/output";
 
 // ─── Paths ────────────────────────────────────────────────────────────────────
 
@@ -34,8 +53,20 @@ async function run(
   return { code, stdout, stderr };
 }
 
+// ─── Plist helper ─────────────────────────────────────────────────────────────
+
+async function plistGet(plistPath: string, key: string): Promise<string> {
+  const { code, stdout } = await run("plutil", [
+    "-extract", key, "raw", "-o", "-", plistPath,
+  ]);
+  if (code !== 0) return "";
+  return stdout.trim();
+}
+
 // ─── Icon tinting ─────────────────────────────────────────────────────────────
 
+// Swift script for per-PNG tinting via AppKit.
+// Compiled once per bundle generation, then run once per PNG in the iconset.
 const TINT_SCRIPT = `
 import AppKit
 
@@ -88,7 +119,7 @@ srcImage.draw(in: NSRect(origin: .zero, size: size),
               operation: .copy,
               fraction: 1.0)
 
-// sourceAtop: tint color clipped to original icon's alpha, preserving shape
+// sourceAtop: tint color clipped to original icon alpha, preserving shape
 ctx.cgContext.setBlendMode(.sourceAtop)
 NSColor(red: r, green: g, blue: b, alpha: 0.65).setFill()
 NSBezierPath(rect: NSRect(origin: .zero, size: size)).fill()
@@ -108,57 +139,121 @@ do {
 }
 `;
 
-async function runSwiftScript(scriptArgs: string[]): Promise<{ code: number; stderr: string }> {
-  const tmpFile = join(tmpdir(), `agp-tint-${Date.now()}.swift`);
-  await Bun.write(tmpFile, TINT_SCRIPT);
-  try {
-    const { code, stderr } = await run("swift", [tmpFile, ...scriptArgs]);
-    return { code, stderr };
-  } finally {
-    await unlink(tmpFile).catch(() => {});
+/** Compile the tint script once, return path to binary + cleanup fn. */
+async function compileTintBinary(): Promise<{ binPath: string; cleanup: () => Promise<void> }> {
+  const tmpDir = await mkdtemp(join(tmpdir(), "agp-tint-"));
+  const srcFile = join(tmpDir, "tint.swift");
+  const binFile = join(tmpDir, "tint");
+  await Bun.write(srcFile, TINT_SCRIPT);
+  const { code, stderr } = await run("swiftc", ["-o", binFile, srcFile]);
+  if (code !== 0) {
+    await rm(tmpDir, { recursive: true, force: true });
+    throw new Error(`swiftc compilation failed: ${stderr.trim()}`);
   }
+  return {
+    binPath: binFile,
+    cleanup: () => rm(tmpDir, { recursive: true, force: true }),
+  };
 }
 
-async function tintIconFile(icnsPath: string, hexColor: string): Promise<void> {
+/**
+ * Tint all PNGs in an iconset using a pre-compiled binary.
+ * srcIcnsPath: original .icns (read-only)
+ * dstIcnsPath: output .icns (written)
+ * hexColor: e.g. "#0066CC"
+ */
+async function tintIcon(
+  srcIcnsPath: string,
+  dstIcnsPath: string,
+  hexColor: string,
+): Promise<void> {
   const tmpDir = await mkdtemp(join(tmpdir(), "agp-iconset-"));
   const iconsetPath = join(tmpDir, "icon.iconset");
 
+  info("Compiling icon tint tool...");
+  const { binPath, cleanup } = await compileTintBinary();
+
   try {
-    const unpack = await run("iconutil", ["-c", "iconset", "-o", iconsetPath, icnsPath]);
+    const unpack = await run("iconutil", ["-c", "iconset", "-o", iconsetPath, srcIcnsPath]);
     if (unpack.code !== 0) throw new Error(`iconutil unpack: ${unpack.stderr.trim()}`);
 
     const pngs = (await readdir(iconsetPath)).filter((f) => f.endsWith(".png"));
+    info(`Tinting ${pngs.length} icon sizes...`);
     for (const png of pngs) {
       const pngPath = join(iconsetPath, png);
-      const { code, stderr } = await runSwiftScript([pngPath, pngPath, hexColor]);
+      const { code, stderr } = await run(binPath, [pngPath, pngPath, hexColor]);
       if (code !== 0) warn(`tint ${png}: ${stderr.trim()}`);
     }
 
-    const repack = await run("iconutil", ["-c", "icns", "-o", icnsPath, iconsetPath]);
+    const repack = await run("iconutil", ["-c", "icns", "-o", dstIcnsPath, iconsetPath]);
     if (repack.code !== 0) throw new Error(`iconutil repack: ${repack.stderr.trim()}`);
   } finally {
+    await cleanup();
     await rm(tmpDir, { recursive: true, force: true });
   }
 }
 
-// ─── Plist helpers ────────────────────────────────────────────────────────────
+// ─── Info.plist template ──────────────────────────────────────────────────────
 
-async function plistGet(plistPath: string, key: string): Promise<string> {
-  const { code, stdout } = await run("plutil", [
-    "-extract", key, "raw", "-o", "-", plistPath,
-  ]);
-  if (code !== 0) return "";
-  return stdout.trim();
+function buildInfoPlist(bundleId: string, displayName: string): string {
+  // Escape XML special chars in display name
+  const safe = displayName.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+\t<key>CFBundleDisplayName</key>
+\t<string>${safe}</string>
+\t<key>CFBundleExecutable</key>
+\t<string>launcher</string>
+\t<key>CFBundleIconFile</key>
+\t<string>icon</string>
+\t<key>CFBundleIdentifier</key>
+\t<string>${bundleId}</string>
+\t<key>CFBundleName</key>
+\t<string>${safe}</string>
+\t<key>CFBundlePackageType</key>
+\t<string>APPL</string>
+\t<key>CFBundleShortVersionString</key>
+\t<string>1.0</string>
+\t<key>CFBundleVersion</key>
+\t<string>1</string>
+\t<key>NSHighResolutionCapable</key>
+\t<true/>
+</dict>
+</plist>
+`;
 }
 
-async function plistSet(plistPath: string, key: string, value: string): Promise<void> {
-  const { code, stderr } = await run("plutil", [
-    "-replace", key, "-string", value, plistPath,
-  ]);
-  if (code !== 0) throw new Error(`plutil -replace ${key}: ${stderr.trim()}`);
+// ─── Launcher script ──────────────────────────────────────────────────────────
+
+/**
+ * Build a shell script that opens the original app with the right profile dir.
+ * The profile data dir is baked in at generation time so the script works when
+ * launched from the Dock (where shell env vars are not inherited).
+ */
+function buildLauncherScript(def: ToolDef, profile: Profile): string {
+  const profileDataDir = join(PROFILES_DIR, profile.name, def.subdir);
+
+  if (def.name === "codex-desktop") {
+    // Codex uses CODEX_HOME env var; needs direct binary launch
+    return `#!/bin/bash
+_CODEX=""
+[ -d "/Applications/Codex.app" ] && _CODEX="/Applications/Codex.app"
+[ -d "$HOME/Applications/Codex.app" ] && _CODEX="$HOME/Applications/Codex.app"
+if [ -n "$_CODEX" ]; then
+    exec env CODEX_HOME=${JSON.stringify(profileDataDir)} "$_CODEX/Contents/MacOS/Codex"
+fi
+`;
+  }
+
+  // All other desktop tools accept --user-data-dir via open(1)
+  return `#!/bin/bash
+exec open -n -a ${JSON.stringify(def.appName!)} --args --user-data-dir=${JSON.stringify(profileDataDir)}
+`;
 }
 
-// ─── Public: generate bundle ──────────────────────────────────────────────────
+// ─── Public: generate wrapper bundle ─────────────────────────────────────────
 
 export interface BundleOptions {
   force?: boolean;
@@ -172,51 +267,58 @@ export async function generateBundle(
 ): Promise<string> {
   const appName = def.appName!;
   const dest = bundlePath(profile.name, appName);
-  const destDir = join(BUNDLES_DIR, profile.name);
 
   if (existsSync(dest)) {
-    if (!opts.force) throw new Error(`Bundle already exists: ${dest}\nUse --force to overwrite.`);
+    if (!opts.force) {
+      throw new Error(`Bundle already exists: ${dest}\nUse --force to overwrite.`);
+    }
     await rm(dest, { recursive: true, force: true });
   }
 
-  await ensureDir(destDir);
+  // Scaffold wrapper bundle structure
+  const contentsDir = join(dest, "Contents");
+  const macosDir = join(contentsDir, "MacOS");
+  const resourcesDir = join(contentsDir, "Resources");
+  await ensureDir(macosDir);
+  await ensureDir(resourcesDir);
 
-  // 1. Copy
-  const copy = await run("ditto", [srcAppPath, dest]);
-  if (copy.code !== 0) throw new Error(`ditto: ${copy.stderr.trim()}`);
+  // PkgInfo (required by the bundle spec)
+  await Bun.write(join(contentsDir, "PkgInfo"), "APPL????");
 
-  const plist = join(dest, "Contents", "Info.plist");
-
-  // 2. Patch bundle identity
+  // Info.plist
+  const displayName = profile.branding?.display_name ?? `${appName} · ${profile.name}`;
   const bundleId = `com.agp.${profile.name}.${def.name}`;
-  const displayName =
-    profile.branding?.display_name ?? `${appName} · ${profile.name}`;
+  await Bun.write(join(contentsDir, "Info.plist"), buildInfoPlist(bundleId, displayName));
 
-  await plistSet(plist, "CFBundleIdentifier", bundleId);
-  await plistSet(plist, "CFBundleDisplayName", displayName);
-  await plistSet(plist, "CFBundleName", displayName);
+  // Icon: extract from source app, optionally tint
+  const srcPlist = join(srcAppPath, "Contents", "Info.plist");
+  const iconFile = await plistGet(srcPlist, "CFBundleIconFile");
+  const iconDest = join(resourcesDir, "icon.icns");
 
-  // 3. Tint icon (if icon_color set and icon_mode is not "none")
-  const { icon_color, icon_mode } = profile.branding ?? {};
-  if (icon_color && icon_mode !== "none") {
-    const iconFile = await plistGet(plist, "CFBundleIconFile");
-    if (iconFile) {
-      const icnsName = iconFile.endsWith(".icns") ? iconFile : `${iconFile}.icns`;
-      const icnsPath = join(dest, "Contents", "Resources", icnsName);
-      if (existsSync(icnsPath)) {
-        await tintIconFile(icnsPath, icon_color);
+  if (iconFile) {
+    const icnsName = iconFile.endsWith(".icns") ? iconFile : `${iconFile}.icns`;
+    const srcIcnsPath = join(srcAppPath, "Contents", "Resources", icnsName);
+
+    if (existsSync(srcIcnsPath)) {
+      const { icon_color, icon_mode } = profile.branding ?? {};
+      if (icon_color && icon_mode !== "none") {
+        await tintIcon(srcIcnsPath, iconDest, icon_color);
       } else {
-        warn(`Icon file not found: ${icnsPath} — skipping tint`);
+        await cp(srcIcnsPath, iconDest);
       }
+    } else {
+      warn(`Icon file not found at ${srcIcnsPath} — bundle will have no icon`);
     }
   }
 
-  // 4. Ad-hoc re-sign (modifications broke the original signature)
-  const sign = await run("codesign", ["--deep", "--force", "--sign", "-", dest]);
-  if (sign.code !== 0) warn(`codesign: ${sign.stderr.trim()}`);
+  // Launcher shell script
+  const launcherPath = join(macosDir, "launcher");
+  await Bun.write(launcherPath, buildLauncherScript(def, profile));
+  await chmod(launcherPath, 0o755);
 
-  // 5. Remove quarantine xattr (we created this locally, not downloaded)
-  await run("xattr", ["-dr", "com.apple.quarantine", dest]);
+  // Ad-hoc sign (wrapper only — no nested code objects, no --deep needed)
+  const sign = await run("codesign", ["--force", "--sign", "-", dest]);
+  if (sign.code !== 0) warn(`codesign: ${sign.stderr.trim()}`);
 
   return dest;
 }
