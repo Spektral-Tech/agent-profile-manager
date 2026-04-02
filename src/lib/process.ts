@@ -13,13 +13,28 @@ export async function execCli(
   process.exit(code);
 }
 
-export function openBundleApp(bundlePath: string, profileDir: string): void {
-  // Open the cloned bundle directly; pass --user-data-dir so the running
-  // process uses the profile's isolated data directory.
-  const proc = Bun.spawn(
-    ["open", "-n", bundlePath, "--args", `--user-data-dir=${profileDir}`],
-    { stdout: "ignore", stderr: "ignore" },
-  );
+export function openBundleApp(
+  bundlePath: string,
+  profileDir: string,
+  executable: string,
+  env?: Record<string, string>,
+): void {
+  // Spawn the bundle's own binary directly rather than going through
+  // `open -n`, which routes through Launch Services and can trigger
+  // "app canonicalization" — macOS redirecting to the registered canonical
+  // app for that executable, causing the original app to open instead.
+  // Running the binary directly lets macOS associate the process with OUR
+  // bundle (determined by walking up from the binary path) without any
+  // Launch Services lookup.
+  const binaryPath = `${bundlePath}/Contents/MacOS/${executable}`;
+  const spawnEnv = env ? { ...process.env, ...env } : process.env;
+  const args = env ? [binaryPath] : [binaryPath, `--user-data-dir=${profileDir}`];
+  const proc = Bun.spawn(args, {
+    stdin: "ignore",
+    stdout: "ignore",
+    stderr: "ignore",
+    env: spawnEnv as Record<string, string>,
+  });
   proc.unref();
 }
 

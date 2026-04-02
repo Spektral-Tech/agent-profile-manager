@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { VALID_TOOLS, type ToolName } from "../lib/config";
 import { execCli, launchCodexDesktop, openDesktopApp, openBundleApp } from "../lib/process";
-import { bundleExists, bundlePath } from "../lib/bundle";
+import { bundleExists, bundlePath, bundleExecutable } from "../lib/bundle";
 import { dirExists, profilePath } from "../models/profile";
 import { appInstalled, cliInstalled, findAppPath, TOOL_DEFS } from "../models/tools";
 import { BOLD, DIM, RESET, YELLOW } from "../ui/colors";
@@ -71,9 +71,10 @@ export async function cmdOpen(args: string[]): Promise<void> {
   if (tool === "codex-desktop") {
     if (bundleExists(name, "Codex")) {
       const bPath = bundlePath(name, "Codex");
+      const exe = bundleExecutable(name, "Codex");
       warnFirstLogin(profileDir);
       info(`Opening bundled Codex for profile '${name}'`);
-      openBundleApp(bPath, profileDir);
+      openBundleApp(bPath, profileDir, exe, { CODEX_HOME: profileDir });
       return;
     }
     if (!appInstalled("Codex")) {
@@ -90,9 +91,10 @@ export async function cmdOpen(args: string[]): Promise<void> {
   if (tool === "gemini-desktop") {
     if (bundleExists(name, "Gemini")) {
       const bPath = bundlePath(name, "Gemini");
+      const exe = bundleExecutable(name, "Gemini");
       warnFirstLogin(profileDir);
       info(`Opening bundled Gemini for profile '${name}'`);
-      openBundleApp(bPath, profileDir);
+      openBundleApp(bPath, profileDir, exe);
       return;
     }
     if (appInstalled("Gemini")) {
@@ -109,9 +111,10 @@ export async function cmdOpen(args: string[]): Promise<void> {
   if (def.kind === "desktop") {
     if (bundleExists(name, def.appName!)) {
       const bPath = bundlePath(name, def.appName!);
+      const exe = bundleExecutable(name, def.appName!);
       warnFirstLogin(profileDir);
       info(`Opening bundled ${def.appName} for profile '${name}'`);
-      openBundleApp(bPath, profileDir);
+      openBundleApp(bPath, profileDir, exe);
       return;
     }
     if (!appInstalled(def.appName!)) {

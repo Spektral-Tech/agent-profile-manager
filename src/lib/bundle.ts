@@ -39,6 +39,18 @@ export function bundleExists(profileName: string, appName: string): boolean {
   return existsSync(bundlePath(profileName, appName));
 }
 
+/** Read CFBundleExecutable from a bundle's Info.plist synchronously. */
+export function bundleExecutable(profileName: string, appName: string): string {
+  const plist = join(bundlePath(profileName, appName), "Contents", "Info.plist");
+  // Fast path: parse the binary plist with plutil synchronously.
+  // Fallback to the appName itself (matches for Claude, Codex, Gemini, Antigravity).
+  try {
+    const result = Bun.spawnSync(["plutil", "-extract", "CFBundleExecutable", "raw", "-o", "-", plist]);
+    if (result.exitCode === 0) return result.stdout.toString().trim();
+  } catch {}
+  return appName;
+}
+
 // ─── Shell helpers ────────────────────────────────────────────────────────────
 
 async function run(
@@ -230,6 +242,10 @@ export async function generateBundle(
   await plistSet(plist, "CFBundleIdentifier", bundleId);
   await plistSet(plist, "CFBundleDisplayName", displayName);
   await plistSet(plist, "CFBundleName", displayName);
+
+  // Remove CFBundleIconName: it references an asset catalog and takes precedence
+  // over CFBundleIconFile on modern macOS, overriding our tinted icon.
+  await run("plutil", ["-remove", "CFBundleIconName", plist]); // no-op if absent
 
   // 3. Tint icon (if icon_color set and icon_mode is not "none")
   const { icon_color, icon_mode } = profile.branding ?? {};
