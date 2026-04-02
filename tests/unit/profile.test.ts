@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-const { profileEnvVars, profilePath } = await import("../../src/models/profile");
+const { profileEnvVars, profilePath } = await import(
+  "../../src/models/profile"
+);
 
 describe("profilePath", () => {
   test("constructs path under PROFILES_DIR", () => {

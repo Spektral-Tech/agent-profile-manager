@@ -1,17 +1,16 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
+import { cmdCreate } from "./commands/create";
+import { cmdDelete } from "./commands/delete";
+import { cmdEnv } from "./commands/env";
+import { usageMain } from "./commands/help";
+import { cmdList } from "./commands/list";
+import { cmdOpen } from "./commands/open";
+import { cmdShell } from "./commands/shell";
+import { cmdUsage } from "./commands/usage";
+import { cmdWhoami } from "./commands/whoami";
 import { AGP_VERSION } from "./lib/config";
 import { RED, RESET } from "./ui/colors";
 import { AgpError } from "./ui/output";
-import { usageMain } from "./commands/help";
-import { cmdCreate } from "./commands/create";
-import { cmdList } from "./commands/list";
-import { cmdDelete } from "./commands/delete";
-import { cmdOpen } from "./commands/open";
-import { cmdShell } from "./commands/shell";
-import { cmdEnv } from "./commands/env";
-import { cmdUsage } from "./commands/usage";
-import { cmdWhoami } from "./commands/whoami";
-import { cmdCleanOldConfig } from "./commands/clean-old-config";
 
 async function main(): Promise<void> {
   const [cmd, ...args] = process.argv.slice(2);
@@ -40,8 +39,6 @@ async function main(): Promise<void> {
       return cmdUsage(args);
     case "whoami":
       return cmdWhoami(args);
-    case "clean-old-config":
-      return cmdCleanOldConfig(args);
     case "-h":
     case "--help":
     case "help":

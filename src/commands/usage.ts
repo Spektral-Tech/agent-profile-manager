@@ -1,11 +1,15 @@
-import { readdir, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { PROFILES_DIR } from "../lib/config";
-import { listProfileDirs } from "../lib/fs";
+import { listProfiles } from "../lib/agpConfig";
 import { dirExists, profilePath } from "../models/profile";
 import { BOLD, CYAN, DIM, GREEN, MAGENTA, RESET, WHITE } from "../ui/colors";
 import { error, info } from "../ui/output";
+
+async function readSessionFile(path: string): Promise<Record<string, unknown>> {
+  const text = await readFile(path, "utf8");
+  return JSON.parse(text) as Record<string, unknown>;
+}
 
 async function countClaudeSessions(profileDir: string): Promise<number> {
   const sessionDir = join(profileDir, "claude", "claude-code-sessions");
@@ -45,7 +49,7 @@ async function countCompletedTurns(profileDir: string): Promise<number> {
     const entries = await readdir(sessionDir);
     for (const f of entries.filter((e) => e.endsWith(".json"))) {
       try {
-        const data = await Bun.file(join(sessionDir, f)).json();
+        const data = await readSessionFile(join(sessionDir, f));
         const turns = data?.completedTurns ?? 0;
         if (typeof turns === "number") total += turns;
       } catch {
@@ -60,7 +64,7 @@ async function countCompletedTurns(profileDir: string): Promise<number> {
 
 async function getSessionTitle(sessionFile: string): Promise<string> {
   try {
-    const data = await Bun.file(sessionFile).json();
+    const data = await readSessionFile(sessionFile);
     return data?.title ?? "Untitled";
   } catch {
     return "Untitled";
@@ -85,8 +89,8 @@ export async function cmdUsage(args: string[]): Promise<void> {
     }
   }
 
-  const names = await listProfileDirs(PROFILES_DIR);
-  if (names.length === 0) {
+  const profiles = await listProfiles();
+  if (profiles.length === 0) {
     info("No profiles found.");
     return;
   }
@@ -123,12 +127,13 @@ export async function cmdUsage(args: string[]): Promise<void> {
         const title = await getSessionTitle(filePath);
         let turnsInSession = 0;
         try {
-          const data = await Bun.file(filePath).json();
+          const data = await readSessionFile(filePath);
           turnsInSession = data?.completedTurns ?? 0;
         } catch {
           // skip
         }
-        const truncTitle = title.length > 35 ? title.slice(0, 35) + "..." : title + "...";
+        const truncTitle =
+          title.length > 35 ? `${title.slice(0, 35)}...` : `${title}...`;
         console.error(
           `    • ${truncTitle.padEnd(40)} (${CYAN}${turnsInSession} interactions${RESET})`,
         );
@@ -148,8 +153,8 @@ export async function cmdUsage(args: string[]): Promise<void> {
   let totalSessions = 0;
   let totalTurns = 0;
 
-  for (const name of names) {
-    const p = profilePath(name);
+  for (const profile of profiles.sort((a, b) => a.name.localeCompare(b.name))) {
+    const p = profilePath(profile.name);
     const sessions = await countClaudeSessions(p);
     const lastActivity = await getLastActivity(p);
     const turns = await countCompletedTurns(p);
@@ -158,13 +163,17 @@ export async function cmdUsage(args: string[]): Promise<void> {
     totalTurns += turns;
 
     console.error(
-      `  ${name.padEnd(nameW - 2)}  ${MAGENTA}${String(turns).padEnd(9)}${RESET}  ${DIM}${lastActivity.padEnd(15)}${RESET}  ${CYAN}${sessions}${RESET}`,
+      `  ${profile.name.padEnd(nameW - 2)}  ${MAGENTA}${String(turns).padEnd(9)}${RESET}  ${DIM}${lastActivity.padEnd(15)}${RESET}  ${CYAN}${sessions}${RESET}`,
     );
   }
 
   console.error(`\n${BOLD}SUMMARY${RESET}`);
   console.error(`${DIM}────────────────────────────────────${RESET}`);
-  console.error(`  Total Claude Code Sessions: ${CYAN}${totalSessions}${RESET}`);
-  console.error(`  Total Interactions (Usage): ${MAGENTA}${totalTurns}${RESET}`);
+  console.error(
+    `  Total Claude Code Sessions: ${CYAN}${totalSessions}${RESET}`,
+  );
+  console.error(
+    `  Total Interactions (Usage): ${MAGENTA}${totalTurns}${RESET}`,
+  );
   console.error("");
 }

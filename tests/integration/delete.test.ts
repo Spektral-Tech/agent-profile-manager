@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { withTempProfiles } from "../helpers/fixtures";
 
@@ -7,7 +8,9 @@ describe("agp delete", () => {
   test("deletes profile with force flag", async () => {
     await withTempProfiles(async (dir) => {
       const env = { ...process.env, AGP_PROFILES_DIR: dir };
-      Bun.spawnSync(["bun", "run", "src/main.ts", "create", "to-delete"], { env });
+      Bun.spawnSync(["bun", "run", "src/main.ts", "create", "to-delete"], {
+        env,
+      });
       expect(existsSync(join(dir, "to-delete"))).toBe(true);
 
       const result = Bun.spawnSync(
@@ -16,7 +19,7 @@ describe("agp delete", () => {
       );
       expect(result.exitCode).toBe(0);
       expect(existsSync(join(dir, "to-delete"))).toBe(false);
-      const yaml = await Bun.file(join(dir, "agp.yaml")).text();
+      const yaml = await readFile(join(dir, "agp.yaml"), "utf8");
       expect(yaml).not.toContain("to-delete");
     });
   });

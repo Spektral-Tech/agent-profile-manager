@@ -17,13 +17,17 @@ export async function cmdShell(args: string[]): Promise<void> {
 
   const currentProfile = process.env.AGP_ACTIVE_PROFILE ?? "";
   if (currentProfile) {
-    warn(`Already in profile '${currentProfile}'. Starting nested shell with profile '${name}'.`);
+    warn(
+      `Already in profile '${currentProfile}'. Starting nested shell with profile '${name}'.`,
+    );
   }
 
   const p = profilePath(name);
   const env = profileEnvVars(name);
 
-  console.error(`\n${BOLD}${CYAN}  agp${RESET}${BOLD}  Entering profile '${name}'${RESET}`);
+  console.error(
+    `\n${BOLD}${CYAN}  agp${RESET}${BOLD}  Entering profile '${name}'${RESET}`,
+  );
   console.error(`${DIM}        CLAUDE_CONFIG_DIR=${p}/claude`);
   console.error(`        CODEX_HOME=${p}/codex`);
   console.error(`        GEMINI_CLI_HOME=${p}/gemini`);

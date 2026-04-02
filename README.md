@@ -1,193 +1,90 @@
 # agp — Agent Profile Manager
 
-Manage isolated AI tool profiles on macOS with ease. Keep your Claude, Codex, Gemini, and Antigravity accounts separate and organized.
-
-## Overview
-
-`agp` is a lightweight shell utility that creates isolated profile directories for multiple AI tools. Each profile maintains separate configuration, authentication, and context for:
-
-- **Claude** (CLI & Desktop)
-- **Codex** (CLI & Desktop)
-- **Gemini** (CLI & Desktop)
-- **Antigravity** (Desktop)
-
-Perfect for developers who work with multiple AI accounts (personal, work, testing) and want clean separation without interference.
+Manage isolated AI tool profiles on macOS with npm-first distribution, semver releases, and local quality gates.
 
 ## Installation
 
-### One-liner (Recommended)
-
-Download and run the interactive installer directly from GitHub:
+AGP is published to npm as [`@spektral/agent-profile-manager`](https://www.npmjs.com/package/@spektral/agent-profile-manager).
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/Spektral-Tech/agent-profile-manager/main/install.sh)
+npm install --global @spektral/agent-profile-manager
 ```
 
-The installer will ask you to choose between:
-1. **Clone repository** — Get the full source code
-2. **Download binary** — Quick pre-built installation
-
-### Manual Installation
-
-Clone the repository and run the installer:
+This installs the public CLI command:
 
 ```bash
-git clone https://github.com/Spektral-Tech/agent-profile-manager.git
-cd agent-profile-manager
-./install.sh
+agp --help
 ```
 
-### PATH Configuration
+### Runtime choice
 
-Make sure `~/.local/bin` is in your `$PATH`:
+The published package ships a standard JavaScript build.
 
-```bash
-# Add to ~/.zshrc or ~/.bashrc if needed
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-Then reload your shell:
-
-```bash
-source ~/.zshrc  # or source ~/.bashrc
-```
+- Default global execution uses Node through the installed `agp` command.
+- If you prefer Bun, you can also run the package with `bun x @spektral/agent-profile-manager --help`.
 
 ## Quick Start
 
 ```bash
-# Create a new profile
 agp create personal --desc "Personal AI workspace"
 agp create work --desc "Work account"
 
-# List all profiles
 agp list
-
-# Open Claude CLI under a profile
 agp open personal claude
-
-# Open Claude Desktop with isolated profile
 agp open work claude-desktop
-
-# Start an interactive shell with all env vars set
 agp shell personal
-
-# Print environment variables (for eval or .envrc)
 agp env work
-
-# View usage summary
 agp usage
-agp usage personal
-
-# Check which profile is currently active
 agp whoami
 ```
 
 ## Commands
 
-### `agp list`
-
-List all profiles with descriptions and creation dates.
-
-```bash
-agp list
-```
-
 ### `agp create <name> [--desc "description"]`
 
-Create a new isolated profile with subdirectories for each tool.
+Create a new isolated profile with dedicated directories for each tool.
 
-```bash
-agp create my-profile
-agp create work-account --desc "Acme Corp"
-```
+### `agp list`
+
+List all profiles stored in `agp.yaml`.
 
 ### `agp open <name> <tool> [tool-args...]`
 
-Open an AI tool using a specific profile. Extra arguments are forwarded to the CLI.
+Open an AI tool under a specific profile.
 
-**Supported tools:**
-- `claude` — Claude CLI
-- `claude-desktop` — Claude Desktop app
-- `codex` — Codex CLI
-- `codex-desktop` — Codex Desktop app
-- `gemini` — Gemini CLI
-- `gemini-desktop` — Gemini Desktop app
-- `antigravity` — Antigravity Desktop app
+Supported tools:
 
-```bash
-agp open personal claude
-agp open work claude-desktop
-agp open personal gemini --model gemini-2.0-flash
-```
+- `claude`
+- `claude-desktop`
+- `codex`
+- `codex-desktop`
+- `gemini`
+- `gemini-desktop`
+- `antigravity`
 
 ### `agp shell <name>`
 
-Start a new interactive shell with the profile's environment variables pre-loaded. All AI tools launched from this shell will use the profile's isolated config.
-
-```bash
-agp shell personal
-# Exit with: exit or Ctrl-D
-```
+Start a shell with the selected profile environment preloaded.
 
 ### `agp env <name>`
 
-Print shell export statements for use with `eval` or `.envrc` files.
-
-```bash
-eval "$(agp env work)"
-agp env personal >> .envrc
-```
+Print shell exports for `eval` or `.envrc`.
 
 ### `agp whoami`
 
-Print the name of the currently active profile. Exits with a non-zero status if not inside a profile context.
-
-```bash
-agp whoami
-# Inside a profile shell: prints the profile name
-# Outside any profile: prints an error and exits 1
-```
+Print the active AGP profile name.
 
 ### `agp delete <name> [-f]`
 
-Delete a profile and all its data. Prompts for confirmation unless `-f` is used.
-
-```bash
-agp delete old-profile
-agp delete old-profile -f  # Skip confirmation
-```
+Delete a profile and its data.
 
 ### `agp usage [name] [--detail]`
 
-Show usage summary and interaction statistics for profiles. Displays Claude Code sessions, completed interactions, and recent activity.
-
-```bash
-agp usage                  # Show summary for all profiles
-agp usage personal         # Show details for 'personal' profile
-agp usage --detail         # Show detailed breakdown of all profiles
-```
-
-**Metrics tracked:**
-- **Profiles**: All agent profiles created
-- **Sessions**: Number of Claude Code sessions per profile
-- **Usage**: Total completed turns/interactions per profile
-- **Last Activity**: Most recent session activity timestamp
-
-### `agp clean-old-config`
-
-> **Temporary command** — will be removed in a future version of agp.
-
-Removes legacy `profile.toml` files from all profiles that have already been migrated to `agp.yaml`. Only run this when you are ready to stop using the bash version of agp entirely.
-
-```bash
-agp clean-old-config
-```
+Show Claude Code usage summaries per profile.
 
 ## Configuration
 
-### agp.yaml
-
-Profile metadata is stored in a single centralized YAML file at `~/.agent-profiles/agp.yaml`. This is the canonical source of truth for all profile definitions.
+AGP stores profile metadata in `~/.agent-profiles/agp.yaml`.
 
 ```yaml
 version: "1"
@@ -195,167 +92,76 @@ profiles:
   - name: personal
     description: Personal AI workspace
     created: "2026-01-01T00:00:00Z"
-  - name: work
-    description: Work account
-    created: "2026-01-02T00:00:00Z"
 ```
 
-**Fields:**
+Each profile directory lives under `~/.agent-profiles/<name>/` and contains provider-specific subdirectories such as `claude/`, `codex/`, `gemini/`, and `antigravity/`.
 
-| Field | Type | Description |
-|---|---|---|
-| `version` | string | Config schema version. Currently `"1"`. |
-| `profiles` | list | List of profile definitions. |
-| `profiles[].name` | string | Unique profile identifier. Letters, numbers, hyphens, underscores only. |
-| `profiles[].description` | string | Human-readable description. May be empty. |
-| `profiles[].created` | string | ISO 8601 creation timestamp. |
+### Legacy migration
 
-The file is managed automatically by the CLI. You can inspect or back it up directly, but editing it by hand is generally not needed.
+Older AGP installs may still have `profile.toml` files. The CLI migrates them into `agp.yaml` automatically and removes the TOML file after a successful import. `agp.yaml` is the only persisted source of truth after migration.
 
-### Migrating from legacy profile.toml
+## Development
 
-Previous versions of `agp` stored metadata in per-profile `profile.toml` files. The CLI automatically migrates these to `agp.yaml` on first use — no manual action required.
+### Tooling
 
-Legacy files are **not deleted** during migration so the bash `agp` script can continue to work alongside the TypeScript CLI. Once you no longer need the bash version, run `agp clean-old-config` to remove the old files.
+- Bun is used for local development, tests, and build orchestration.
+- Biome provides formatting and linting.
+- Husky runs local validation before commits and pushes.
+- Changesets controls semver releases.
 
-While both formats coexist, `agp` will warn you that changes made via the bash script to `profile.toml` will not be reflected in `agp.yaml`.
-
-## Profile Structure
-
-Each profile is stored at `~/.agent-profiles/<name>/`:
-
-```
-~/.agent-profiles/
-├── agp.yaml            # Centralized config (all profile metadata)
-├── personal/
-│   ├── claude/         # Claude CLI config + Desktop app data
-│   ├── codex/          # Codex CLI config + Desktop app data
-│   ├── gemini/         # Gemini CLI config
-│   └── antigravity/    # Antigravity app data
-└── work/
-    ├── claude/
-    ├── codex/
-    ├── gemini/
-    └── antigravity/
-```
-
-## Environment Variables
-
-When you open a tool or shell with a profile, these variables are set:
-
-- `CLAUDE_CONFIG_DIR` — Path to Claude profile directory
-- `CODEX_HOME` — Path to Codex profile directory
-- `GEMINI_CLI_HOME` — Path to Gemini profile directory
-- `AGP_ACTIVE_PROFILE` — Current profile name
-- `AGP_PROFILE_DIR` — Full path to profile directory
-- `AGENTIC_PROFILE` — Alternative name for current profile
-
-### Customization
-
-Override the default profiles directory:
+### Common scripts
 
 ```bash
-export AGP_PROFILES_DIR="/custom/path/to/profiles"
+bun install
+bun run check
+bun test
+bun run build
+bun run verify
+bun run changeset
 ```
 
-## Examples
+### Local hooks
 
-### Switching between accounts
+The repository uses Husky with:
+
+- `pre-commit`: Biome on staged files plus `bun test`
+- `pre-push`: full `bun run verify`
+
+If hooks are not installed yet:
 
 ```bash
-# Quick access to different Claude accounts
-agp open personal claude
-agp open work claude
-
-# No context confusion between accounts
+bun run prepare
 ```
 
-### Interactive shells
+## Release flow
 
-```bash
-# Start a shell with personal profile context
-agp shell personal
+This repository uses Changesets for semver.
 
-# Any claude or gemini commands use this profile
-claude chat "Hello from personal profile"
-gemini ask "What's 2+2?"
+- Add a release note with `bun run changeset`
+- Merge the changeset into `main`
+- GitHub Actions opens or updates the release PR
+- Merging the release PR publishes to npm
 
-# Exit back to your default shell
-exit
-```
+Version selection:
 
-### Integrate with direnv
+- `patch`: bug fixes and small internal improvements
+- `minor`: backward-compatible features
+- `major`: breaking changes
 
-```bash
-# In your project directory
-agp env work >> .envrc
-direnv allow
-```
+## Publishing security
 
-Now all tools in that directory automatically use the work profile.
+The release workflow is set up for npm trusted publishing with GitHub Actions OIDC, which npm recommends over long-lived publish tokens. Configure the trusted publisher in npm for `.github/workflows/release.yml`.
 
-### Desktop app isolation
+If trusted publishing cannot be enabled immediately, an `NPM_TOKEN` may still be used as a temporary fallback for manual troubleshooting, but it is not the primary release path.
 
-```bash
-# Open multiple instances of Claude with different profiles
-agp open personal claude-desktop
-agp open work claude-desktop
+## Package hygiene
 
-# Each window has separate auth, history, and settings
-```
+The npm package intentionally excludes:
 
-## Validation & Reserved Names
+- `.claude/`
+- `tests/`
+- `src/`
+- `install.sh`
+- the legacy bash `agp` script
 
-Profile names must contain only:
-- Letters (a-z, A-Z)
-- Numbers (0-9)
-- Hyphens and underscores (-_)
-
-These names are reserved: `list`, `create`, `delete`, `open`, `shell`, `env`, `usage`, `whoami`, `install`, `help`
-
-## Tips & Troubleshooting
-
-### First-time login to desktop apps
-
-When opening a desktop app for the first time, `agp` suggests:
-1. Temporarily set your default browser to a secondary browser
-2. Click Sign In in the app
-3. Restore your original default browser
-
-This prevents accidental profile switching at the browser level.
-
-### Using multiple profiles in one shell
-
-```bash
-# Start a nested shell with a different profile
-agp shell personal      # Now in personal profile
-  agp shell work        # Start nested work profile
-  exit                  # Back to personal
-exit                    # Back to default
-```
-
-### Find your profiles
-
-```bash
-# List physical profile locations
-ls -la ~/.agent-profiles/
-
-# Or use agp
-agp list
-```
-
-## Requirements
-
-- **macOS** (10.13 or later)
-- **Bash 4.0+**
-- Relevant AI CLI tools or Desktop apps installed
-
-## License
-
-MIT License © 2026 Spektral Tech - Antonio Eduardo (SkyaTura)
-
-See [LICENSE](LICENSE) for details.
-
-## Support
-
-For issues, feature requests, or contributions, please open an issue or PR.
+Use `bun run pack:check` to verify the publish payload locally.

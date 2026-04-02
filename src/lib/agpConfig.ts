@@ -1,10 +1,12 @@
+import { existsSync } from "node:fs";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { listProfileDirs, ensureDir } from "./fs";
+import type { Profile } from "../models/profile";
+import { info } from "../ui/output";
+import { ensureDir, listProfileDirs } from "./fs";
 import { readToml } from "./toml";
 import { parseYaml, serializeYaml } from "./yaml";
 import type { AgpConfig } from "./yaml";
-import type { Profile } from "../models/profile";
-import { info, warn } from "../ui/output";
 
 export type { AgpConfig };
 
@@ -28,6 +30,10 @@ async function readLegacyToml(name: string): Promise<Record<string, string>> {
   return readToml(join(profilesDir(), name, "profile.toml"));
 }
 
+async function removeLegacyToml(name: string): Promise<void> {
+  await rm(join(profilesDir(), name, "profile.toml"), { force: true });
+}
+
 async function migrateLegacy(): Promise<AgpConfig> {
   const dirs = await listProfileDirs(profilesDir());
   const profiles: Profile[] = [];
@@ -40,6 +46,7 @@ async function migrateLegacy(): Promise<AgpConfig> {
       description: data.description ?? "",
       created: data.created ?? "",
     });
+    await removeLegacyToml(name);
   }
 
   const config: AgpConfig = { version: "1", profiles };
@@ -47,9 +54,7 @@ async function migrateLegacy(): Promise<AgpConfig> {
 
   if (profiles.length > 0) {
     info(
-      `Migrated ${profiles.length} legacy profile(s) to agp.yaml. ` +
-        `Old profile.toml files kept for bash agp compatibility. ` +
-        `Run 'agp clean-old-config' when you no longer need them.`,
+      `Migrated ${profiles.length} legacy profile(s) to agp.yaml. Legacy profile.toml files were removed after import.`,
     );
   }
 
@@ -67,18 +72,20 @@ async function mergeUnregistered(config: AgpConfig): Promise<boolean> {
     if (Object.keys(data).length === 0) continue;
     const profileName = data.name ?? name;
     // Guard against TOML name differing from directory name: if the resolved
-    // name is already registered, skip to avoid duplicate entries.
-    if (known.has(profileName)) continue;
+    // name is already registered, remove the stale TOML and skip to avoid duplicates.
+    if (known.has(profileName)) {
+      await removeLegacyToml(name);
+      continue;
+    }
     known.add(profileName);
     config.profiles.push({
       name: profileName,
       description: data.description ?? "",
       created: data.created ?? "",
     });
+    await removeLegacyToml(name);
     info(
-      `Migrated legacy profile '${name}' to agp.yaml. ` +
-        `Old profile.toml kept for bash agp compatibility. ` +
-        `Run 'agp clean-old-config' when you no longer need it.`,
+      `Migrated legacy profile '${name}' to agp.yaml. Legacy profile.toml was removed after import.`,
     );
     changed = true;
   }
@@ -86,47 +93,26 @@ async function mergeUnregistered(config: AgpConfig): Promise<boolean> {
   return changed;
 }
 
-async function warnCoexisting(config: AgpConfig): Promise<void> {
-  const stale: string[] = [];
-  for (const profile of config.profiles) {
-    const data = await readLegacyToml(profile.name);
-    if (Object.keys(data).length > 0) {
-      stale.push(profile.name);
-    }
-  }
-  if (stale.length > 0) {
-    warn(
-      `Profile(s) [${stale.join(", ")}] already imported into agp.yaml but ` +
-        `profile.toml still exists. Future changes to profile.toml will not be ` +
-        `reflected in agp.yaml. Run 'agp clean-old-config' to remove old files.`,
-    );
-  }
-}
-
 export async function loadConfig(): Promise<AgpConfig> {
   if (_config) return _config;
 
-  const yamlFile = Bun.file(configPath());
-
-  if (await yamlFile.exists()) {
-    const text = await yamlFile.text();
+  if (existsSync(configPath())) {
+    const text = await readFile(configPath(), "utf8");
     const config = parseYaml(text);
     const changed = await mergeUnregistered(config);
     if (changed) await saveConfig(config);
-    await warnCoexisting(config);
     _config = config;
     return config;
   }
 
   const config = await migrateLegacy();
-  await warnCoexisting(config);
   _config = config;
   return config;
 }
 
 export async function saveConfig(config: AgpConfig): Promise<void> {
   await ensureDir(profilesDir());
-  await Bun.write(configPath(), serializeYaml(config));
+  await writeFile(configPath(), serializeYaml(config), "utf8");
 }
 
 export async function listProfiles(): Promise<Profile[]> {
@@ -154,15 +140,4 @@ export async function removeProfile(name: string): Promise<void> {
   const config = await loadConfig();
   config.profiles = config.profiles.filter((p) => p.name !== name);
   await saveConfig(config);
-}
-
-/** Returns names of profiles that have a legacy profile.toml alongside the YAML entry. */
-export async function legacyTomlProfiles(): Promise<string[]> {
-  const config = await loadConfig();
-  const stale: string[] = [];
-  for (const profile of config.profiles) {
-    const data = await readLegacyToml(profile.name);
-    if (Object.keys(data).length > 0) stale.push(profile.name);
-  }
-  return stale;
 }

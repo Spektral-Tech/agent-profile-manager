@@ -1,6 +1,6 @@
 import { join } from "node:path";
-import { PROFILES_DIR, PROFILE_SUBDIRS, RESERVED_NAMES } from "../lib/config";
-import { configProfileExists, getProfile, addProfile } from "../lib/agpConfig";
+import { addProfile, configProfileExists, getProfile } from "../lib/agpConfig";
+import { PROFILES_DIR, RESERVED_NAMES } from "../lib/config";
 import { error } from "../ui/output";
 
 export interface Profile {
@@ -47,9 +47,7 @@ export async function writeProfile(
   await addProfile({ name, description, created });
 }
 
-export function profileEnvVars(
-  name: string,
-): Record<string, string> {
+export function profileEnvVars(name: string): Record<string, string> {
   const p = profilePath(name);
   return {
     CLAUDE_CONFIG_DIR: join(p, "claude"),
