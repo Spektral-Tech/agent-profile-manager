@@ -73,7 +73,7 @@ export async function cmdOpen(args: string[]): Promise<void> {
       const bPath = bundlePath(name, "Codex");
       warnFirstLogin(profileDir);
       info(`Opening bundled Codex for profile '${name}'`);
-      openBundleApp(bPath);
+      openBundleApp(bPath, profileDir);
       return;
     }
     if (!appInstalled("Codex")) {
@@ -92,7 +92,7 @@ export async function cmdOpen(args: string[]): Promise<void> {
       const bPath = bundlePath(name, "Gemini");
       warnFirstLogin(profileDir);
       info(`Opening bundled Gemini for profile '${name}'`);
-      openBundleApp(bPath);
+      openBundleApp(bPath, profileDir);
       return;
     }
     if (appInstalled("Gemini")) {
@@ -111,7 +111,7 @@ export async function cmdOpen(args: string[]): Promise<void> {
       const bPath = bundlePath(name, def.appName!);
       warnFirstLogin(profileDir);
       info(`Opening bundled ${def.appName} for profile '${name}'`);
-      openBundleApp(bPath);
+      openBundleApp(bPath, profileDir);
       return;
     }
     if (!appInstalled(def.appName!)) {

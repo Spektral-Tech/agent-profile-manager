@@ -13,10 +13,11 @@ export async function execCli(
   process.exit(code);
 }
 
-export function openBundleApp(bundlePath: string): void {
-  // The wrapper bundle's launcher script handles all app-specific args.
+export function openBundleApp(bundlePath: string, profileDir: string): void {
+  // Open the cloned bundle directly; pass --user-data-dir so the running
+  // process uses the profile's isolated data directory.
   const proc = Bun.spawn(
-    ["open", "-n", bundlePath],
+    ["open", "-n", bundlePath, "--args", `--user-data-dir=${profileDir}`],
     { stdout: "ignore", stderr: "ignore" },
   );
   proc.unref();
