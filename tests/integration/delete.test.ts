@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { withTempProfiles } from "../helpers/fixtures";
 
@@ -32,6 +32,23 @@ describe("agp delete", () => {
       );
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr.toString()).toContain("not found");
+    });
+  });
+
+  test("removes YAML entry even when profile directory is already missing", async () => {
+    await withTempProfiles(async (dir) => {
+      const env = { ...process.env, AGP_PROFILES_DIR: dir };
+      Bun.spawnSync(["bun", "run", "src/main.ts", "create", "stale"], { env });
+      await rm(join(dir, "stale"), { recursive: true, force: true });
+
+      const result = Bun.spawnSync(
+        ["bun", "run", "src/main.ts", "delete", "stale", "-f"],
+        { env },
+      );
+
+      expect(result.exitCode).toBe(0);
+      const yaml = await readFile(join(dir, "agp.yaml"), "utf8");
+      expect(yaml).not.toContain("stale");
     });
   });
 });

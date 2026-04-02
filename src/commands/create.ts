@@ -2,6 +2,7 @@ import { join } from "node:path";
 import { PROFILE_SUBDIRS } from "../lib/config";
 import { ensureDir } from "../lib/fs";
 import {
+  dirExists,
   profileExists,
   profilePath,
   validateName,
@@ -38,6 +39,12 @@ export async function cmdCreate(args: string[]): Promise<void> {
   if (await profileExists(name)) {
     error(
       `Profile '${name}' already exists. Run 'agp list' to see all profiles.`,
+    );
+  }
+
+  if (await dirExists(name)) {
+    error(
+      `Profile directory '${profilePath(name)}' already exists. Delete or rename it before creating '${name}'.`,
     );
   }
 

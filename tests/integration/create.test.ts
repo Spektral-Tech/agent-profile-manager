@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { withTempProfiles } from "../helpers/fixtures";
 
@@ -42,6 +42,24 @@ describe("agp create", () => {
       );
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr.toString()).toContain("already exists");
+    });
+  });
+
+  test("rejects creation when profile directory already exists on disk", async () => {
+    await withTempProfiles(async (dir) => {
+      const orphanDir = join(dir, "orphan");
+      await mkdir(orphanDir, { recursive: true });
+
+      const result = Bun.spawnSync(
+        ["bun", "run", "src/main.ts", "create", "orphan"],
+        { env: { ...process.env, AGP_PROFILES_DIR: dir } },
+      );
+
+      expect(result.exitCode).not.toBe(0);
+      expect(result.stderr.toString()).toContain("already exists");
+      expect(existsSync(orphanDir)).toBe(true);
+      const yaml = await readFile(join(dir, "agp.yaml"), "utf8");
+      expect(yaml).not.toContain("- name: orphan");
     });
   });
 

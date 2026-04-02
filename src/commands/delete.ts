@@ -2,7 +2,7 @@ import { stderr, stdin } from "node:process";
 import { createInterface } from "node:readline/promises";
 import { removeProfile } from "../lib/agpConfig";
 import { removeDir } from "../lib/fs";
-import { dirExists, profilePath } from "../models/profile";
+import { profileExists, profilePath } from "../models/profile";
 import { BOLD, DIM, RESET, YELLOW } from "../ui/colors";
 import { error, info, success } from "../ui/output";
 
@@ -29,7 +29,7 @@ export async function cmdDelete(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  if (!(await dirExists(name))) {
+  if (!(await profileExists(name))) {
     error(`Profile '${name}' not found.`);
   }
 
