@@ -5,6 +5,18 @@ export interface AgpConfig {
   profiles: Profile[];
 }
 
+function parseQuotedValue(value: string): string {
+  if (value.startsWith('"') && value.endsWith('"')) {
+    return value.slice(1, -1).replace(/\\"/g, '"');
+  }
+
+  if (value.startsWith("'") && value.endsWith("'")) {
+    return value.slice(1, -1);
+  }
+
+  return value;
+}
+
 export function parseYaml(text: string): AgpConfig {
   const config: AgpConfig = { version: "1", profiles: [] };
   let current: Partial<Profile> | null = null;
@@ -32,15 +44,8 @@ export function parseYaml(text: string): AgpConfig {
     if (current) {
       const descriptionMatch = line.match(/^ {4}description:\s*(.*)$/);
       if (descriptionMatch) {
-        let val = descriptionMatch[1].trim();
-        // strip surrounding quotes if present
-        if (
-          (val.startsWith('"') && val.endsWith('"')) ||
-          (val.startsWith("'") && val.endsWith("'"))
-        ) {
-          val = val.slice(1, -1);
-        }
-        current.description = val;
+        const val = descriptionMatch[1].trim();
+        current.description = parseQuotedValue(val);
         continue;
       }
 

@@ -68,6 +68,25 @@ describe("serializeYaml / parseYaml", () => {
     expect(result.profiles[0].description).toBe("key: value");
   });
 
+  test("quoted descriptions unescape embedded quotes when parsed", () => {
+    const cfg: AgpConfig = {
+      version: "1",
+      profiles: [
+        {
+          name: "quoted",
+          description: 'He said "hello"',
+          created: "2026-01-01T00:00:00Z",
+        },
+      ],
+    };
+
+    const yaml = serializeYaml(cfg);
+    expect(yaml).toContain('description: "He said \\"hello\\""');
+
+    const result = parseYaml(yaml);
+    expect(result.profiles[0].description).toBe('He said "hello"');
+  });
+
   test("version field is preserved", () => {
     const result = parseYaml(serializeYaml({ version: "2", profiles: [] }));
     expect(result.version).toBe("2");
